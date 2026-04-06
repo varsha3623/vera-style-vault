@@ -1,0 +1,243 @@
+import { useState, useEffect, useMemo } from 'react';
+import { storage } from '@/lib/storage';
+import { generateOutfits } from '@/lib/recommendations';
+import { Calendar as CalendarIcon, Cloud, Sun, CloudRain, Snowflake, Wind, Plus, MapPin } from 'lucide-react';
+
+interface WeatherData {
+  temp: number;
+  condition: string;
+  icon: string;
+}
+
+const WeatherIcon = ({ condition }: { condition: string }) => {
+  const c = condition.toLowerCase();
+  if (c.includes('rain')) return <CloudRain className="text-accent" size={28} />;
+  if (c.includes('snow')) return <Snowflake className="text-accent" size={28} />;
+  if (c.includes('cloud')) return <Cloud className="text-accent" size={28} />;
+  if (c.includes('wind')) return <Wind className="text-accent" size={28} />;
+  return <Sun className="text-accent" size={28} />;
+};
+
+export default function HomePage() {
+  const [weather, setWeather] = useState<WeatherData>({ temp: 24, condition: 'Clear', icon: '01d' });
+  const [time, setTime] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState('');
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [eventName, setEventName] = useState('');
+  const [eventLocation, setEventLocation] = useState('');
+  const prefs = storage.getPreferences();
+  const wardrobe = storage.getWardrobe();
+  const events = storage.getEvents();
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (prefs?.location) {
+      fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(prefs.location)}&units=metric&appid=demo`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.main) setWeather({ temp: Math.round(data.main.temp), condition: data.weather[0]?.main || 'Clear', icon: data.weather[0]?.icon || '01d' });
+        })
+        .catch(() => {});
+    }
+  }, [prefs?.location]);
+
+  const outfits = useMemo(() =>
+    generateOutfits(wardrobe, weather, prefs, undefined, 7),
+    [wardrobe, weather, prefs]
+  );
+
+  const today = new Date();
+  const currentMonth = today.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
+
+  const handleAddEvent = () => {
+    if (selectedDate && eventName) {
+      storage.addEvent({ date: selectedDate, event: eventName, location: eventLocation });
+      setShowEventForm(false);
+      setEventName('');
+      setEventLocation('');
+    }
+  };
+
+  const formatDate = (day: number) => {
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(day).padStart(2, '0');
+    return `${today.getFullYear()}-${m}-${d}`;
+  };
+
+  // Outfit clock positions
+  const clockPositions = Array.from({ length: 7 }, (_, i) => {
+    const angle = (i * 360 / 7) - 90;
+    const rad = (angle * Math.PI) / 180;
+    return { x: 50 + 35 * Math.cos(rad), y: 50 + 35 * Math.sin(rad) };
+  });
+
+  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const todayDayIndex = today.getDay();
+
+  return (
+    <div className="px-4 py-6 max-w-lg mx-auto space-y-8">
+      {/* Weather + Time */}
+      <div className="flex items-center justify-between p-5 bg-card rounded-2xl shadow-card animate-fade-in">
+        <div className="flex items-center gap-3">
+          <WeatherIcon condition={weather.condition} />
+          <div>
+            <p className="font-display text-2xl font-bold text-foreground">{weather.temp}°C</p>
+            <p className="font-body text-xs text-muted-foreground">{weather.condition}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="font-display text-2xl font-bold text-foreground">
+            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
+          <p className="font-body text-xs text-muted-foreground">
+            {prefs?.location || 'Set location in preferences'}
+          </p>
+        </div>
+      </div>
+
+      {/* Outfit Clock */}
+      <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
+        <h2 className="font-display text-lg font-bold text-foreground mb-4">Today's Looks</h2>
+        <div className="relative w-full aspect-square max-w-xs mx-auto">
+          {/* Center - Today */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-20 h-20 rounded-full gold-gradient flex items-center justify-center shadow-luxury animate-pulse-gold">
+              <div className="text-center">
+                <p className="font-display text-xs font-bold text-primary">TODAY</p>
+                <p className="font-body text-[10px] text-primary/70">{dayLabels[todayDayIndex]}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Orbiting outfits */}
+          {clockPositions.map((pos, i) => {
+            const dayIdx = (todayDayIndex + i) % 7;
+            const hasOutfit = outfits[i] && outfits[i].length > 0;
+            return (
+              <div
+                key={i}
+                className="absolute w-14 h-14 -translate-x-1/2 -translate-y-1/2 transition-all duration-500"
+                style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+              >
+                <div className={`w-full h-full rounded-xl border shadow-card flex items-center justify-center transition-transform hover:scale-110 ${
+                  i === 0 ? 'border-accent bg-accent/10' : 'border-border bg-card'
+                }`}>
+                  {hasOutfit && outfits[i][0].image ? (
+                    <img src={outfits[i][0].image} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                  ) : (
+                    <div className="text-center">
+                      <p className="font-body text-[9px] text-muted-foreground">{dayLabels[dayIdx]}</p>
+                      <p className="font-body text-[8px] text-muted-foreground/60">{hasOutfit ? `${outfits[i].length} pcs` : 'Add items'}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Calendar */}
+      <div className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display text-lg font-bold text-foreground">{currentMonth}</h2>
+          <CalendarIcon size={18} className="text-muted-foreground" />
+        </div>
+
+        <div className="bg-card rounded-2xl shadow-card p-4">
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {dayLabels.map(d => (
+              <div key={d} className="text-center text-[10px] font-body text-muted-foreground font-medium py-1">{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
+            {Array.from({ length: daysInMonth }, (_, i) => {
+              const day = i + 1;
+              const dateStr = formatDate(day);
+              const isToday = day === today.getDate();
+              const hasEvent = events.some(e => e.date === dateStr);
+              const isSelected = selectedDate === dateStr;
+
+              return (
+                <button
+                  key={day}
+                  onClick={() => { setSelectedDate(dateStr); setShowEventForm(true); }}
+                  className={`relative aspect-square flex items-center justify-center rounded-lg text-xs font-body transition-all ${
+                    isToday ? 'gold-gradient text-primary font-bold' :
+                    isSelected ? 'bg-accent/20 text-accent font-medium' :
+                    'text-foreground hover:bg-muted'
+                  }`}
+                >
+                  {day}
+                  {hasEvent && <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-accent" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Event Form */}
+        {showEventForm && (
+          <div className="mt-3 p-4 bg-card rounded-xl border border-border shadow-card animate-scale-in">
+            <p className="font-body text-xs text-muted-foreground mb-3">Add event for {selectedDate}</p>
+            {storage.getEventForDate(selectedDate) && (
+              <div className="mb-3 p-2 bg-accent/10 rounded-lg">
+                <p className="font-body text-xs text-accent">📌 {storage.getEventForDate(selectedDate)!.event}</p>
+              </div>
+            )}
+            <input value={eventName} onChange={e => setEventName(e.target.value)} placeholder="Event name"
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground font-body text-sm mb-2 focus:outline-none focus:ring-1 focus:ring-accent/50" />
+            <div className="flex items-center gap-2 mb-3">
+              <MapPin size={14} className="text-muted-foreground" />
+              <input value={eventLocation} onChange={e => setEventLocation(e.target.value)} placeholder="Location"
+                className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-foreground font-body text-sm focus:outline-none focus:ring-1 focus:ring-accent/50" />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowEventForm(false)} className="flex-1 py-2 rounded-lg border border-border text-xs font-body text-muted-foreground hover:bg-muted">Cancel</button>
+              <button onClick={handleAddEvent} className="flex-1 py-2 rounded-lg gold-gradient text-primary text-xs font-body font-semibold">
+                <Plus size={12} className="inline mr-1" />Add
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Must-Have Wardrobe */}
+      <div className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
+        <h2 className="font-display text-lg font-bold text-foreground mb-4">Must-Have Essentials</h2>
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+          {['Classic White Shirt', 'Tailored Blazer', 'Little Black Dress', 'Quality Denim', 'Versatile Sneakers'].map((item, i) => (
+            <div key={i} className="flex-shrink-0 w-28">
+              <div className="w-28 h-36 rounded-xl bg-gradient-to-br from-secondary to-muted flex items-center justify-center shadow-card">
+                <span className="font-body text-xs text-muted-foreground text-center px-2">{item}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Trending */}
+      <div className="animate-fade-in" style={{ animationDelay: '0.4s' }}>
+        <h2 className="font-display text-lg font-bold text-foreground mb-4">Trending Looks</h2>
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+          {['Quiet Luxury', 'Old Money', 'Coastal Chic', 'Minimalist', 'Power Dressing'].map((trend, i) => (
+            <div key={i} className="flex-shrink-0 w-32">
+              <div className="w-32 h-44 rounded-xl bg-gradient-to-br from-card to-secondary flex items-end shadow-card overflow-hidden">
+                <div className="w-full p-3 glass">
+                  <p className="font-body text-xs font-medium text-foreground">{trend}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
