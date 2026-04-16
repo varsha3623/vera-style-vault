@@ -3,6 +3,14 @@
 export interface User {
   name: string;
   email: string;
+  passwordHash: string;
+  onboarded?: boolean;
+}
+
+// Legacy interface for migration
+interface LegacyUser {
+  name: string;
+  email: string;
   password: string;
   onboarded?: boolean;
 }
@@ -46,6 +54,16 @@ export interface ChatMessage {
   timestamp: number;
 }
 
+// --- Password hashing ---
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// --- Helpers ---
 const get = <T>(key: string, fallback: T): T => {
   try {
     const item = localStorage.getItem(key);
@@ -55,17 +73,72 @@ const get = <T>(key: string, fallback: T): T => {
 
 const set = (key: string, value: unknown) => localStorage.setItem(key, JSON.stringify(value));
 
+// --- User-scoped key helper ---
+function userKey(base: string, email: string): string {
+  return `${base}_${email}`;
+}
+
+// --- Migrate legacy plaintext users on first access ---
+function getUsers(): User[] {
+  const raw = get<(User | LegacyUser)[]>('vera_users', []);
+  return raw.map(u => {
+    // Already migrated users have passwordHash
+    if ('passwordHash' in u && u.passwordHash) return u as User;
+    // Legacy users have password field — keep as-is, migration happens at login/signup
+    return u as unknown as User;
+  });
+}
+
 export const storage = {
-  getUsers: (): User[] => get('vera_users', []),
-  addUser: (user: User) => { const users = get<User[]>('vera_users', []); users.push(user); set('vera_users', users); },
-  findUser: (email: string): User | undefined => get<User[]>('vera_users', []).find(u => u.email === email),
+  getUsers,
+  addUser: async (name: string, email: string, password: string): Promise<void> => {
+    const users = get<User[]>('vera_users', []);
+    const passwordHash = await hashPassword(password);
+    users.push({ name, email, passwordHash, onboarded: false });
+    set('vera_users', users);
+  },
+  findUser: (email: string): User | undefined =>
+    getUsers().find(u => u.email === email),
+
+  verifyPassword: async (user: User, password: string): Promise<boolean> => {
+    // Handle legacy plaintext passwords during migration
+    const raw = get<Record<string, string>[]>('vera_users', []);
+    const stored = raw.find(u => u.email === user.email);
+    if (!stored) return false;
+
+    if ('password' in stored && stored.password && !('passwordHash' in stored && (stored as Record<string, string>).passwordHash)) {
+      // Legacy user: compare plaintext, then migrate to hash
+      if (stored.password === password) {
+        const users = get<Record<string, string>[]>('vera_users', []);
+        const idx = users.findIndex(u => u.email === user.email);
+        if (idx !== -1) {
+          const passwordHash = await hashPassword(password);
+          delete users[idx].password;
+          users[idx].passwordHash = passwordHash;
+          set('vera_users', users);
+        }
+        return true;
+      }
+      return false;
+    }
+
+    // Normal hash comparison
+    const inputHash = await hashPassword(password);
+    return inputHash === user.passwordHash;
+  },
 
   setCurrentUser: (email: string) => set('vera_current_user', email),
-  getCurrentUser: (): string | null => localStorage.getItem('vera_current_user') ? JSON.parse(localStorage.getItem('vera_current_user')!) : null,
+  getCurrentUser: (): string | null => {
+    try {
+      const item = localStorage.getItem('vera_current_user');
+      return item ? JSON.parse(item) : null;
+    } catch { return null; }
+  },
   logout: () => localStorage.removeItem('vera_current_user'),
 
-  getPreferences: (): UserPreferences | null => get('vera_preferences', null),
-  setPreferences: (prefs: UserPreferences) => set('vera_preferences', prefs),
+  // --- User-scoped data accessors ---
+  getPreferences: (email: string): UserPreferences | null => get(userKey('vera_preferences', email), null),
+  setPreferences: (email: string, prefs: UserPreferences) => set(userKey('vera_preferences', email), prefs),
 
   markOnboarded: (email: string) => {
     const users = get<User[]>('vera_users', []);
@@ -73,33 +146,56 @@ export const storage = {
     if (idx !== -1) { users[idx].onboarded = true; set('vera_users', users); }
   },
 
-  getWardrobe: (): WardrobeItem[] => get('vera_wardrobe', []),
-  addWardrobeItem: (item: WardrobeItem) => { const w = get<WardrobeItem[]>('vera_wardrobe', []); w.push(item); set('vera_wardrobe', w); },
-  removeWardrobeItem: (id: string) => { const w = get<WardrobeItem[]>('vera_wardrobe', []).filter(i => i.id !== id); set('vera_wardrobe', w); },
-  incrementWorn: (id: string) => {
-    const w = get<WardrobeItem[]>('vera_wardrobe', []);
+  getWardrobe: (email: string): WardrobeItem[] => get(userKey('vera_wardrobe', email), []),
+  addWardrobeItem: (email: string, item: WardrobeItem) => {
+    const w = get<WardrobeItem[]>(userKey('vera_wardrobe', email), []);
+    w.push(item);
+    set(userKey('vera_wardrobe', email), w);
+  },
+  removeWardrobeItem: (email: string, id: string) => {
+    const w = get<WardrobeItem[]>(userKey('vera_wardrobe', email), []).filter(i => i.id !== id);
+    set(userKey('vera_wardrobe', email), w);
+  },
+  incrementWorn: (email: string, id: string) => {
+    const w = get<WardrobeItem[]>(userKey('vera_wardrobe', email), []);
     const item = w.find(i => i.id === id);
-    if (item) { item.wornCount++; set('vera_wardrobe', w); }
+    if (item) { item.wornCount++; set(userKey('vera_wardrobe', email), w); }
   },
 
-  getCustomSections: (): string[] => get('vera_custom_sections', []),
-  addCustomSection: (name: string) => { const s = get<string[]>('vera_custom_sections', []); if (!s.includes(name)) { s.push(name); set('vera_custom_sections', s); } },
+  getCustomSections: (email: string): string[] => get(userKey('vera_custom_sections', email), []),
+  addCustomSection: (email: string, name: string) => {
+    const s = get<string[]>(userKey('vera_custom_sections', email), []);
+    if (!s.includes(name)) { s.push(name); set(userKey('vera_custom_sections', email), s); }
+  },
 
-  getOutfits: (): SavedOutfit[] => get('vera_outfits', []),
-  saveOutfit: (outfit: SavedOutfit) => { const o = get<SavedOutfit[]>('vera_outfits', []); o.push(outfit); set('vera_outfits', o); },
+  getOutfits: (email: string): SavedOutfit[] => get(userKey('vera_outfits', email), []),
+  saveOutfit: (email: string, outfit: SavedOutfit) => {
+    const o = get<SavedOutfit[]>(userKey('vera_outfits', email), []);
+    o.push(outfit);
+    set(userKey('vera_outfits', email), o);
+  },
 
-  getEvents: (): CalendarEvent[] => get('vera_events', []),
-  addEvent: (event: CalendarEvent) => { const e = get<CalendarEvent[]>('vera_events', []); e.push(event); set('vera_events', e); },
-  getEventForDate: (date: string): CalendarEvent | undefined => get<CalendarEvent[]>('vera_events', []).find(e => e.date === date),
+  getEvents: (email: string): CalendarEvent[] => get(userKey('vera_events', email), []),
+  addEvent: (email: string, event: CalendarEvent) => {
+    const e = get<CalendarEvent[]>(userKey('vera_events', email), []);
+    e.push(event);
+    set(userKey('vera_events', email), e);
+  },
+  getEventForDate: (email: string, date: string): CalendarEvent | undefined =>
+    get<CalendarEvent[]>(userKey('vera_events', email), []).find(e => e.date === date),
 
-  getMessages: (): ChatMessage[] => get('vera_messages', []),
-  addMessage: (msg: ChatMessage) => { const m = get<ChatMessage[]>('vera_messages', []); m.push(msg); set('vera_messages', m); },
+  getMessages: (email: string): ChatMessage[] => get(userKey('vera_messages', email), []),
+  addMessage: (email: string, msg: ChatMessage) => {
+    const m = get<ChatMessage[]>(userKey('vera_messages', email), []);
+    m.push(msg);
+    set(userKey('vera_messages', email), m);
+  },
 
-  getWishlist: (): string[] => get('vera_wishlist', []),
-  toggleWishlist: (id: string) => {
-    const w = get<string[]>('vera_wishlist', []);
+  getWishlist: (email: string): string[] => get(userKey('vera_wishlist', email), []),
+  toggleWishlist: (email: string, id: string) => {
+    const w = get<string[]>(userKey('vera_wishlist', email), []);
     const idx = w.indexOf(id);
     if (idx !== -1) w.splice(idx, 1); else w.push(id);
-    set('vera_wishlist', w);
+    set(userKey('vera_wishlist', email), w);
   },
 };
