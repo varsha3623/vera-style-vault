@@ -1,14 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { storage, type ChatMessage } from '@/lib/storage';
+import { useAuth } from '@/contexts/AuthContext';
 import { chatRecommend } from '@/lib/recommendations';
 import { Send } from 'lucide-react';
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>(storage.getMessages());
+  const { user } = useAuth();
+  const email = user?.email || '';
+  const [messages, setMessages] = useState<ChatMessage[]>(storage.getMessages(email));
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
-  const prefs = storage.getPreferences();
-  const wardrobe = storage.getWardrobe();
+  const prefs = storage.getPreferences(email);
+  const wardrobe = storage.getWardrobe(email);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -23,18 +26,18 @@ export default function ChatPage() {
         timestamp: Date.now(),
       };
       setMessages([welcome]);
-      storage.addMessage(welcome);
+      storage.addMessage(email, welcome);
     }
   }, []);
 
   const handleSend = () => {
     if (!input.trim()) return;
     const userMsg: ChatMessage = { id: Date.now().toString(), sender: 'user', text: input.trim(), timestamp: Date.now() };
-    storage.addMessage(userMsg);
+    storage.addMessage(email, userMsg);
 
     const response = chatRecommend(input, wardrobe, prefs);
     const veraMsg: ChatMessage = { id: (Date.now() + 1).toString(), sender: 'vera', text: response, timestamp: Date.now() + 100 };
-    storage.addMessage(veraMsg);
+    storage.addMessage(email, veraMsg);
 
     setMessages(prev => [...prev, userMsg, veraMsg]);
     setInput('');

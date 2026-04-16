@@ -19,22 +19,20 @@ export default function Signup() {
     { label: 'Passwords match', ok: password.length > 0 && password === confirm },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (password !== confirm) { setError('Passwords do not match'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
 
     setLoading(true);
-    setTimeout(() => {
-      const err = signup(name, email, password);
-      if (err) {
-        setError(err);
-        setLoading(false);
-      } else {
-        navigate('/onboarding');
-      }
-    }, 300);
+    const err = await signup(name, email, password);
+    if (err) {
+      setError(err);
+      setLoading(false);
+    } else {
+      navigate('/onboarding');
+    }
   };
 
   return (
@@ -86,7 +84,6 @@ export default function Signup() {
               placeholder="••••••••" />
           </div>
 
-          {/* Password strength indicators */}
           {password.length > 0 && (
             <div className="space-y-1">
               {passwordChecks.map(check => (

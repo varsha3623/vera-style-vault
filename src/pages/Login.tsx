@@ -12,21 +12,18 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Small delay for UX feel
-    setTimeout(() => {
-      const err = login(email, password);
-      if (err) {
-        setError(err);
-        setLoading(false);
-      } else {
-        navigate('/');
-      }
-    }, 300);
+    const err = await login(email, password);
+    if (err) {
+      setError(err);
+      setLoading(false);
+    } else {
+      navigate('/');
+    }
   };
 
   return (

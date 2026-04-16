@@ -22,6 +22,7 @@ const WeatherIcon = ({ condition }: { condition: string }) => {
 
 export default function HomePage() {
   const { user } = useAuth();
+  const email = user?.email || '';
   const navigate = useNavigate();
   const [weather, setWeather] = useState<WeatherData>({ temp: 24, condition: 'Clear', icon: '01d' });
   const [time, setTime] = useState(new Date());
@@ -29,9 +30,9 @@ export default function HomePage() {
   const [showEventForm, setShowEventForm] = useState(false);
   const [eventName, setEventName] = useState('');
   const [eventLocation, setEventLocation] = useState('');
-  const prefs = storage.getPreferences();
-  const wardrobe = storage.getWardrobe();
-  const events = storage.getEvents();
+  const prefs = storage.getPreferences(email);
+  const wardrobe = storage.getWardrobe(email);
+  const events = storage.getEvents(email);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -61,7 +62,7 @@ export default function HomePage() {
 
   const handleAddEvent = () => {
     if (selectedDate && eventName) {
-      storage.addEvent({ date: selectedDate, event: eventName, location: eventLocation });
+      storage.addEvent(email, { date: selectedDate, event: eventName, location: eventLocation });
       setShowEventForm(false);
       setEventName('');
       setEventLocation('');
@@ -120,7 +121,7 @@ export default function HomePage() {
       <div className="flex gap-3 animate-fade-in" style={{ animationDelay: '0.1s' }}>
         {[
           { icon: Shirt, label: 'Wardrobe', path: '/wardrobe', count: wardrobe.length },
-          { icon: Sparkles, label: 'Outfits', path: '/outfits', count: storage.getOutfits().length },
+          { icon: Sparkles, label: 'Outfits', path: '/outfits', count: storage.getOutfits(email).length },
         ].map(action => (
           <button
             key={action.label}
@@ -221,9 +222,9 @@ export default function HomePage() {
         {showEventForm && (
           <div className="mt-3 p-4 bg-card rounded-xl border border-border shadow-card animate-scale-in">
             <p className="font-body text-xs text-muted-foreground mb-3">Add event for {selectedDate}</p>
-            {storage.getEventForDate(selectedDate) && (
+            {storage.getEventForDate(email, selectedDate) && (
               <div className="mb-3 p-2 bg-accent/10 rounded-lg border border-accent/20">
-                <p className="font-body text-xs text-accent">📌 {storage.getEventForDate(selectedDate)!.event}</p>
+                <p className="font-body text-xs text-accent">📌 {storage.getEventForDate(email, selectedDate)!.event}</p>
               </div>
             )}
             <input value={eventName} onChange={e => setEventName(e.target.value)} placeholder="Event name"

@@ -1,12 +1,15 @@
 import { useState, useMemo } from 'react';
 import { storage } from '@/lib/storage';
+import { useAuth } from '@/contexts/AuthContext';
 import { generateOutfits } from '@/lib/recommendations';
 import { Heart, RefreshCw, Bookmark } from 'lucide-react';
 
 export default function OutfitsPage() {
+  const { user } = useAuth();
+  const email = user?.email || '';
   const [refresh, setRefresh] = useState(0);
-  const wardrobe = storage.getWardrobe();
-  const prefs = storage.getPreferences();
+  const wardrobe = storage.getWardrobe(email);
+  const prefs = storage.getPreferences(email);
   const weather = { temp: 24, condition: 'Clear' };
 
   const outfits = useMemo(() =>
@@ -15,7 +18,7 @@ export default function OutfitsPage() {
   );
 
   const handleSave = (items: typeof wardrobe) => {
-    storage.saveOutfit({
+    storage.saveOutfit(email, {
       id: Date.now().toString(),
       items,
       date: new Date().toISOString(),
@@ -50,7 +53,6 @@ export default function OutfitsPage() {
         {outfits.map((outfit, i) => (
           <div key={i} className="animate-fade-in-up" style={{ animationDelay: `${i * 0.1}s`, opacity: 0 }}>
             <div className="bg-card rounded-2xl shadow-card border border-border/50 overflow-hidden">
-              {/* Layered clothing preview */}
               <div className="relative h-56 bg-gradient-to-br from-secondary to-muted flex items-center justify-center"
                 style={{ perspective: '600px' }}>
                 {outfit.map((item, j) => (
