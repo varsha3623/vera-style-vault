@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { storage, type User } from '@/lib/storage';
 
 interface AuthContextType {
@@ -6,6 +6,8 @@ interface AuthContextType {
   login: (email: string, password: string) => string | null;
   signup: (name: string, email: string, password: string) => string | null;
   logout: () => void;
+  markOnboarded: () => void;
+  refreshUser: () => void;
   isAuthenticated: boolean;
 }
 
@@ -14,20 +16,24 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
-  useEffect(() => {
+  const refreshUser = useCallback(() => {
     const email = storage.getCurrentUser();
     if (email) {
       const u = storage.findUser(email);
-      if (u) setUser(u);
+      if (u) setUser({ ...u });
     }
   }, []);
+
+  useEffect(() => {
+    refreshUser();
+  }, [refreshUser]);
 
   const login = (email: string, password: string): string | null => {
     const u = storage.findUser(email);
     if (!u) return 'No account found with this email';
     if (u.password !== password) return 'Incorrect password';
     storage.setCurrentUser(email);
-    setUser(u);
+    setUser({ ...u });
     return null;
   };
 
@@ -36,8 +42,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const newUser: User = { name, email, password, onboarded: false };
     storage.addUser(newUser);
     storage.setCurrentUser(email);
-    setUser(newUser);
+    setUser({ ...newUser });
     return null;
+  };
+
+  const markOnboarded = () => {
+    if (user) {
+      storage.markOnboarded(user.email);
+      setUser({ ...user, onboarded: true });
+    }
   };
 
   const logout = () => {
@@ -46,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, signup, logout, markOnboarded, refreshUser, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

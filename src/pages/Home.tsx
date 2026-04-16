@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { storage } from '@/lib/storage';
+import { useAuth } from '@/contexts/AuthContext';
 import { generateOutfits } from '@/lib/recommendations';
-import { Calendar as CalendarIcon, Cloud, Sun, CloudRain, Snowflake, Wind, Plus, MapPin } from 'lucide-react';
+import { Calendar as CalendarIcon, Cloud, Sun, CloudRain, Snowflake, Wind, Plus, MapPin, Shirt, Sparkles, TrendingUp } from 'lucide-react';
 
 interface WeatherData {
   temp: number;
@@ -19,6 +21,8 @@ const WeatherIcon = ({ condition }: { condition: string }) => {
 };
 
 export default function HomePage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [weather, setWeather] = useState<WeatherData>({ temp: 24, condition: 'Clear', icon: '01d' });
   const [time, setTime] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState('');
@@ -70,7 +74,6 @@ export default function HomePage() {
     return `${today.getFullYear()}-${m}-${d}`;
   };
 
-  // Outfit clock positions
   const clockPositions = Array.from({ length: 7 }, (_, i) => {
     const angle = (i * 360 / 7) - 90;
     const rad = (angle * Math.PI) / 180;
@@ -80,32 +83,65 @@ export default function HomePage() {
   const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const todayDayIndex = today.getDay();
 
+  const greeting = () => {
+    const h = time.getHours();
+    if (h < 12) return 'Good Morning';
+    if (h < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-8">
-      {/* Weather + Time */}
-      <div className="flex items-center justify-between p-5 bg-card rounded-2xl shadow-card animate-fade-in">
-        <div className="flex items-center gap-3">
+      {/* Greeting + Weather */}
+      <div className="animate-fade-in">
+        <h1 className="font-display text-2xl font-bold text-foreground">{greeting()}, {user?.name?.split(' ')[0] || 'there'}!</h1>
+        <p className="font-body text-sm text-muted-foreground mt-1">Let's find your perfect outfit today</p>
+      </div>
+
+      <div className="flex gap-3 animate-fade-in" style={{ animationDelay: '0.05s' }}>
+        <div className="flex-1 flex items-center gap-3 p-4 bg-card rounded-2xl shadow-card border border-border/50">
           <WeatherIcon condition={weather.condition} />
           <div>
-            <p className="font-display text-2xl font-bold text-foreground">{weather.temp}°C</p>
-            <p className="font-body text-xs text-muted-foreground">{weather.condition}</p>
+            <p className="font-display text-xl font-bold text-foreground">{weather.temp}°C</p>
+            <p className="font-body text-[10px] text-muted-foreground">{weather.condition}</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="font-display text-2xl font-bold text-foreground">
+        <div className="flex-1 p-4 bg-card rounded-2xl shadow-card border border-border/50 text-right">
+          <p className="font-display text-xl font-bold text-foreground">
             {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </p>
-          <p className="font-body text-xs text-muted-foreground">
-            {prefs?.location || 'Set location in preferences'}
+          <p className="font-body text-[10px] text-muted-foreground truncate">
+            {prefs?.location || 'Set location'}
           </p>
         </div>
       </div>
 
+      {/* Quick actions */}
+      <div className="flex gap-3 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+        {[
+          { icon: Shirt, label: 'Wardrobe', path: '/wardrobe', count: wardrobe.length },
+          { icon: Sparkles, label: 'Outfits', path: '/outfits', count: storage.getOutfits().length },
+        ].map(action => (
+          <button
+            key={action.label}
+            onClick={() => navigate(action.path)}
+            className="flex-1 flex items-center gap-3 p-4 bg-card rounded-2xl shadow-card border border-border/50 hover:shadow-luxury transition-shadow text-left"
+          >
+            <div className="w-10 h-10 rounded-xl gold-gradient flex items-center justify-center flex-shrink-0">
+              <action.icon size={18} className="text-primary" />
+            </div>
+            <div>
+              <p className="font-body text-sm font-medium text-foreground">{action.label}</p>
+              <p className="font-body text-[10px] text-muted-foreground">{action.count} {action.count === 1 ? 'item' : 'items'}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+
       {/* Outfit Clock */}
-      <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
-        <h2 className="font-display text-lg font-bold text-foreground mb-4">Today's Looks</h2>
+      <div className="animate-fade-in" style={{ animationDelay: '0.15s' }}>
+        <h2 className="font-display text-lg font-bold text-foreground mb-4">Weekly Outfit Plan</h2>
         <div className="relative w-full aspect-square max-w-xs mx-auto">
-          {/* Center - Today */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-20 h-20 rounded-full gold-gradient flex items-center justify-center shadow-luxury animate-pulse-gold">
               <div className="text-center">
@@ -115,7 +151,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Orbiting outfits */}
           {clockPositions.map((pos, i) => {
             const dayIdx = (todayDayIndex + i) % 7;
             const hasOutfit = outfits[i] && outfits[i].length > 0;
@@ -133,7 +168,7 @@ export default function HomePage() {
                   ) : (
                     <div className="text-center">
                       <p className="font-body text-[9px] text-muted-foreground">{dayLabels[dayIdx]}</p>
-                      <p className="font-body text-[8px] text-muted-foreground/60">{hasOutfit ? `${outfits[i].length} pcs` : 'Add items'}</p>
+                      <p className="font-body text-[8px] text-muted-foreground/60">{hasOutfit ? `${outfits[i].length} pcs` : '—'}</p>
                     </div>
                   )}
                 </div>
@@ -150,7 +185,7 @@ export default function HomePage() {
           <CalendarIcon size={18} className="text-muted-foreground" />
         </div>
 
-        <div className="bg-card rounded-2xl shadow-card p-4">
+        <div className="bg-card rounded-2xl shadow-card p-4 border border-border/50">
           <div className="grid grid-cols-7 gap-1 mb-2">
             {dayLabels.map(d => (
               <div key={d} className="text-center text-[10px] font-body text-muted-foreground font-medium py-1">{d}</div>
@@ -183,25 +218,24 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Event Form */}
         {showEventForm && (
           <div className="mt-3 p-4 bg-card rounded-xl border border-border shadow-card animate-scale-in">
             <p className="font-body text-xs text-muted-foreground mb-3">Add event for {selectedDate}</p>
             {storage.getEventForDate(selectedDate) && (
-              <div className="mb-3 p-2 bg-accent/10 rounded-lg">
+              <div className="mb-3 p-2 bg-accent/10 rounded-lg border border-accent/20">
                 <p className="font-body text-xs text-accent">📌 {storage.getEventForDate(selectedDate)!.event}</p>
               </div>
             )}
             <input value={eventName} onChange={e => setEventName(e.target.value)} placeholder="Event name"
-              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground font-body text-sm mb-2 focus:outline-none focus:ring-1 focus:ring-accent/50" />
+              className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-foreground font-body text-sm mb-2 focus:outline-none focus:ring-1 focus:ring-accent/50" />
             <div className="flex items-center gap-2 mb-3">
-              <MapPin size={14} className="text-muted-foreground" />
+              <MapPin size={14} className="text-muted-foreground flex-shrink-0" />
               <input value={eventLocation} onChange={e => setEventLocation(e.target.value)} placeholder="Location"
-                className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-foreground font-body text-sm focus:outline-none focus:ring-1 focus:ring-accent/50" />
+                className="flex-1 bg-background border border-border rounded-xl px-3 py-2.5 text-foreground font-body text-sm focus:outline-none focus:ring-1 focus:ring-accent/50" />
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setShowEventForm(false)} className="flex-1 py-2 rounded-lg border border-border text-xs font-body text-muted-foreground hover:bg-muted">Cancel</button>
-              <button onClick={handleAddEvent} className="flex-1 py-2 rounded-lg gold-gradient text-primary text-xs font-body font-semibold">
+              <button onClick={() => setShowEventForm(false)} className="flex-1 py-2.5 rounded-xl border border-border text-xs font-body text-muted-foreground hover:bg-muted transition-colors">Cancel</button>
+              <button onClick={handleAddEvent} disabled={!eventName.trim()} className="flex-1 py-2.5 rounded-xl gold-gradient text-primary text-xs font-body font-semibold disabled:opacity-50">
                 <Plus size={12} className="inline mr-1" />Add
               </button>
             </div>
@@ -211,11 +245,14 @@ export default function HomePage() {
 
       {/* Must-Have Wardrobe */}
       <div className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
-        <h2 className="font-display text-lg font-bold text-foreground mb-4">Must-Have Essentials</h2>
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp size={16} className="text-accent" />
+          <h2 className="font-display text-lg font-bold text-foreground">Must-Have Essentials</h2>
+        </div>
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
           {['Classic White Shirt', 'Tailored Blazer', 'Little Black Dress', 'Quality Denim', 'Versatile Sneakers'].map((item, i) => (
             <div key={i} className="flex-shrink-0 w-28">
-              <div className="w-28 h-36 rounded-xl bg-gradient-to-br from-secondary to-muted flex items-center justify-center shadow-card">
+              <div className="w-28 h-36 rounded-xl bg-gradient-to-br from-secondary to-muted flex items-center justify-center shadow-card border border-border/30">
                 <span className="font-body text-xs text-muted-foreground text-center px-2">{item}</span>
               </div>
             </div>
@@ -225,11 +262,14 @@ export default function HomePage() {
 
       {/* Trending */}
       <div className="animate-fade-in" style={{ animationDelay: '0.4s' }}>
-        <h2 className="font-display text-lg font-bold text-foreground mb-4">Trending Looks</h2>
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles size={16} className="text-accent" />
+          <h2 className="font-display text-lg font-bold text-foreground">Trending Looks</h2>
+        </div>
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
           {['Quiet Luxury', 'Old Money', 'Coastal Chic', 'Minimalist', 'Power Dressing'].map((trend, i) => (
             <div key={i} className="flex-shrink-0 w-32">
-              <div className="w-32 h-44 rounded-xl bg-gradient-to-br from-card to-secondary flex items-end shadow-card overflow-hidden">
+              <div className="w-32 h-44 rounded-xl bg-gradient-to-br from-card to-secondary flex items-end shadow-card overflow-hidden border border-border/30">
                 <div className="w-full p-3 glass">
                   <p className="font-body text-xs font-medium text-foreground">{trend}</p>
                 </div>
