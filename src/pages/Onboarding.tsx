@@ -2,8 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { storage, type UserPreferences } from '@/lib/storage';
+import { MapPin, Briefcase, Palette, Shield, ChevronRight, ChevronLeft } from 'lucide-react';
 
-const steps = ['Location', 'Lifestyle', 'Style', 'Restrictions'];
+const steps = [
+  { key: 'Location', icon: MapPin, desc: 'Where are you based?' },
+  { key: 'Lifestyle', icon: Briefcase, desc: 'What describes your day?' },
+  { key: 'Style', icon: Palette, desc: 'What\'s your vibe?' },
+  { key: 'Restrictions', icon: Shield, desc: 'Any preferences?' },
+];
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
@@ -12,7 +18,7 @@ export default function Onboarding() {
   const [style, setStyle] = useState<UserPreferences['style']>('elegant');
   const [sleevelessAllowed, setSleevelessAllowed] = useState(true);
   const [shortAllowed, setShortAllowed] = useState(true);
-  const { user } = useAuth();
+  const { markOnboarded } = useAuth();
   const navigate = useNavigate();
 
   const next = () => step < 3 ? setStep(step + 1) : finish();
@@ -26,34 +32,22 @@ export default function Onboarding() {
       restrictions: { sleevelessAllowed, shortOutfitsAllowed: shortAllowed },
     };
     storage.setPreferences(prefs);
-    if (user) storage.markOnboarded(user.email);
+    markOnboarded();
     navigate('/');
   };
 
-  const Option = ({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) => (
-    <button
-      onClick={onClick}
-      className={`w-full py-3 px-5 rounded-lg border font-body text-sm transition-all ${
-        selected
-          ? 'border-accent bg-accent/10 text-accent font-medium shadow-card'
-          : 'border-border bg-card text-foreground hover:border-accent/40'
-      }`}
-    >
-      {label}
-    </button>
-  );
+  const lifestyleOptions = [
+    { value: 'student' as const, label: 'Student', emoji: '📚', desc: 'Campus & social life' },
+    { value: 'corporate' as const, label: 'Corporate', emoji: '💼', desc: 'Office & professional' },
+    { value: 'other' as const, label: 'Other', emoji: '✨', desc: 'Freelance, creative & more' },
+  ];
 
-  const Toggle = ({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) => (
-    <div className="flex items-center justify-between py-3 px-5 rounded-lg border border-border bg-card">
-      <span className="font-body text-sm text-foreground">{label}</span>
-      <button
-        onClick={() => onChange(!value)}
-        className={`w-12 h-6 rounded-full transition-all relative ${value ? 'bg-accent' : 'bg-muted'}`}
-      >
-        <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-background shadow transition-transform ${value ? 'left-6' : 'left-0.5'}`} />
-      </button>
-    </div>
-  );
+  const styleOptions = [
+    { value: 'casual' as const, label: 'Casual', emoji: '👟', desc: 'Relaxed & comfortable' },
+    { value: 'elegant' as const, label: 'Elegant', emoji: '🥂', desc: 'Refined & sophisticated' },
+    { value: 'trendy' as const, label: 'Trendy', emoji: '🔥', desc: 'Fashion-forward looks' },
+    { value: 'minimal' as const, label: 'Minimal', emoji: '🤍', desc: 'Clean & simple' },
+  ];
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
@@ -66,65 +60,132 @@ export default function Onboarding() {
         {/* Progress */}
         <div className="flex gap-2 mb-8">
           {steps.map((s, i) => (
-            <div key={s} className="flex-1">
-              <div className={`h-1 rounded-full transition-all ${i <= step ? 'gold-gradient' : 'bg-muted'}`} />
-              <p className={`text-[10px] mt-1 font-body text-center ${i <= step ? 'text-accent' : 'text-muted-foreground'}`}>{s}</p>
+            <div key={s.key} className="flex-1">
+              <div className={`h-1.5 rounded-full transition-all duration-500 ${i <= step ? 'gold-gradient' : 'bg-muted'}`} />
+              <div className="flex items-center justify-center gap-1 mt-2">
+                <s.icon size={10} className={i <= step ? 'text-accent' : 'text-muted-foreground'} />
+                <p className={`text-[10px] font-body ${i <= step ? 'text-accent font-medium' : 'text-muted-foreground'}`}>{s.key}</p>
+              </div>
             </div>
           ))}
         </div>
 
-        <div className="space-y-4 min-h-[240px]">
+        <div className="min-h-[280px]">
           {step === 0 && (
             <div className="space-y-4 animate-fade-in">
-              <label className="text-xs font-body font-medium uppercase tracking-wider text-muted-foreground">Your City</label>
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 rounded-2xl gold-gradient flex items-center justify-center mx-auto mb-3">
+                  <MapPin size={24} className="text-primary" />
+                </div>
+                <h2 className="font-display text-lg font-bold text-foreground">Your Location</h2>
+                <p className="font-body text-xs text-muted-foreground mt-1">We'll use this for weather-based styling</p>
+              </div>
               <input
                 value={location}
                 onChange={e => setLocation(e.target.value)}
                 placeholder="e.g., New York, London, Mumbai"
-                className="w-full bg-card border border-border rounded-lg px-4 py-3 text-foreground font-body text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                className="w-full bg-card border border-border rounded-xl px-4 py-3.5 text-foreground font-body text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
               />
             </div>
           )}
 
           {step === 1 && (
             <div className="space-y-3 animate-fade-in">
-              <label className="text-xs font-body font-medium uppercase tracking-wider text-muted-foreground">Lifestyle</label>
-              {(['student', 'corporate', 'other'] as const).map(l => (
-                <Option key={l} label={l.charAt(0).toUpperCase() + l.slice(1)} selected={lifestyle === l} onClick={() => setLifestyle(l)} />
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 rounded-2xl gold-gradient flex items-center justify-center mx-auto mb-3">
+                  <Briefcase size={24} className="text-primary" />
+                </div>
+                <h2 className="font-display text-lg font-bold text-foreground">Your Lifestyle</h2>
+              </div>
+              {lifestyleOptions.map(l => (
+                <button
+                  key={l.value}
+                  onClick={() => setLifestyle(l.value)}
+                  className={`w-full flex items-center gap-4 py-3.5 px-5 rounded-xl border font-body text-sm transition-all ${
+                    lifestyle === l.value
+                      ? 'border-accent bg-accent/10 shadow-card'
+                      : 'border-border bg-card hover:border-accent/40'
+                  }`}
+                >
+                  <span className="text-2xl">{l.emoji}</span>
+                  <div className="text-left">
+                    <p className={`font-medium ${lifestyle === l.value ? 'text-accent' : 'text-foreground'}`}>{l.label}</p>
+                    <p className="text-xs text-muted-foreground">{l.desc}</p>
+                  </div>
+                </button>
               ))}
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-3 animate-fade-in">
-              <label className="text-xs font-body font-medium uppercase tracking-wider text-muted-foreground">Style Preference</label>
-              {(['casual', 'elegant', 'trendy', 'minimal'] as const).map(s => (
-                <Option key={s} label={s.charAt(0).toUpperCase() + s.slice(1)} selected={style === s} onClick={() => setStyle(s)} />
-              ))}
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 rounded-2xl gold-gradient flex items-center justify-center mx-auto mb-3">
+                  <Palette size={24} className="text-primary" />
+                </div>
+                <h2 className="font-display text-lg font-bold text-foreground">Your Style</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {styleOptions.map(s => (
+                  <button
+                    key={s.value}
+                    onClick={() => setStyle(s.value)}
+                    className={`flex flex-col items-center gap-2 py-5 px-4 rounded-xl border font-body text-sm transition-all ${
+                      style === s.value
+                        ? 'border-accent bg-accent/10 shadow-card'
+                        : 'border-border bg-card hover:border-accent/40'
+                    }`}
+                  >
+                    <span className="text-3xl">{s.emoji}</span>
+                    <p className={`font-medium ${style === s.value ? 'text-accent' : 'text-foreground'}`}>{s.label}</p>
+                    <p className="text-[10px] text-muted-foreground">{s.desc}</p>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
           {step === 3 && (
             <div className="space-y-4 animate-fade-in">
-              <label className="text-xs font-body font-medium uppercase tracking-wider text-muted-foreground">Restrictions</label>
-              <Toggle label="Sleeveless outfits allowed" value={sleevelessAllowed} onChange={setSleevelessAllowed} />
-              <Toggle label="Short outfits allowed" value={shortAllowed} onChange={setShortAllowed} />
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 rounded-2xl gold-gradient flex items-center justify-center mx-auto mb-3">
+                  <Shield size={24} className="text-primary" />
+                </div>
+                <h2 className="font-display text-lg font-bold text-foreground">Preferences</h2>
+                <p className="font-body text-xs text-muted-foreground mt-1">We'll respect these in recommendations</p>
+              </div>
+              {[
+                { label: 'Sleeveless outfits', value: sleevelessAllowed, onChange: setSleevelessAllowed },
+                { label: 'Short outfits', value: shortAllowed, onChange: setShortAllowed },
+              ].map(toggle => (
+                <div key={toggle.label} className="flex items-center justify-between py-4 px-5 rounded-xl border border-border bg-card">
+                  <span className="font-body text-sm text-foreground">{toggle.label}</span>
+                  <button
+                    onClick={() => toggle.onChange(!toggle.value)}
+                    className={`w-12 h-7 rounded-full transition-all relative ${toggle.value ? 'bg-accent' : 'bg-muted'}`}
+                  >
+                    <span className={`absolute top-1 w-5 h-5 rounded-full bg-background shadow-sm transition-transform ${toggle.value ? 'left-6' : 'left-1'}`} />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
 
         <div className="flex gap-3 mt-8">
           {step > 0 && (
-            <button onClick={back} className="flex-1 border border-border py-3 rounded-lg font-body text-sm text-muted-foreground hover:bg-card transition-colors">
+            <button onClick={back} className="flex items-center justify-center gap-1 flex-1 border border-border py-3 rounded-xl font-body text-sm text-muted-foreground hover:bg-card transition-colors">
+              <ChevronLeft size={16} />
               Back
             </button>
           )}
           <button
             onClick={next}
             disabled={step === 0 && !location}
-            className="flex-1 gold-gradient text-primary font-body font-semibold py-3 rounded-lg tracking-wide uppercase text-sm hover:opacity-90 transition-opacity disabled:opacity-50 shadow-luxury"
+            className="flex items-center justify-center gap-1 flex-1 gold-gradient text-primary font-body font-semibold py-3 rounded-xl tracking-wide uppercase text-sm hover:opacity-90 transition-opacity disabled:opacity-50 shadow-luxury"
           >
             {step === 3 ? 'Complete' : 'Continue'}
+            {step < 3 && <ChevronRight size={16} />}
           </button>
         </div>
       </div>
