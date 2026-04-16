@@ -1,9 +1,12 @@
 import { storage } from '@/lib/storage';
+import { useAuth } from '@/contexts/AuthContext';
 import { Heart } from 'lucide-react';
 
 export default function Wishlist() {
-  const wishlist = storage.getWishlist();
-  const wardrobe = storage.getWardrobe();
+  const { user } = useAuth();
+  const email = user?.email || '';
+  const wishlist = storage.getWishlist(email);
+  const wardrobe = storage.getWardrobe(email);
   const items = wardrobe.filter(i => wishlist.includes(i.id));
 
   return (

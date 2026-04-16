@@ -18,8 +18,9 @@ export default function Onboarding() {
   const [style, setStyle] = useState<UserPreferences['style']>('elegant');
   const [sleevelessAllowed, setSleevelessAllowed] = useState(true);
   const [shortAllowed, setShortAllowed] = useState(true);
-  const { markOnboarded } = useAuth();
+  const { user, markOnboarded } = useAuth();
   const navigate = useNavigate();
+  const email = user?.email || '';
 
   const next = () => step < 3 ? setStep(step + 1) : finish();
   const back = () => step > 0 && setStep(step - 1);
@@ -31,7 +32,7 @@ export default function Onboarding() {
       style,
       restrictions: { sleevelessAllowed, shortOutfitsAllowed: shortAllowed },
     };
-    storage.setPreferences(prefs);
+    storage.setPreferences(email, prefs);
     markOnboarded();
     navigate('/');
   };

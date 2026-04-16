@@ -3,9 +3,10 @@ import { storage } from '@/lib/storage';
 
 export default function Profile() {
   const { user } = useAuth();
-  const prefs = storage.getPreferences();
-  const wardrobe = storage.getWardrobe();
-  const outfits = storage.getOutfits();
+  const email = user?.email || '';
+  const prefs = storage.getPreferences(email);
+  const wardrobe = storage.getWardrobe(email);
+  const outfits = storage.getOutfits(email);
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto animate-fade-in">

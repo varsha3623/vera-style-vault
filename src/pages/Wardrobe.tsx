@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { storage, type WardrobeItem } from '@/lib/storage';
+import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Upload, X, ChevronLeft, Trash2, Search, BarChart3, Eye } from 'lucide-react';
 
 const DEFAULT_SECTIONS = ['Tops', 'Bottoms', 'Dresses', 'Traditional', 'Shoes', 'Accessories'];
@@ -11,18 +12,20 @@ const SECTION_EMOJIS: Record<string, string> = {
 const COLOR_OPTIONS = ['black', 'white', 'navy', 'beige', 'red', 'blue', 'green', 'pink', 'gray', 'brown', 'cream', 'denim', 'gold'];
 
 export default function WardrobePage() {
+  const { user } = useAuth();
+  const email = user?.email || '';
   const [phase, setPhase] = useState<'doors' | 'inside'>('doors');
   const [doorsOpen, setDoorsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [showAddSection, setShowAddSection] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
-  const [wardrobe, setWardrobe] = useState(storage.getWardrobe());
+  const [wardrobe, setWardrobe] = useState(storage.getWardrobe(email));
   const [searchQuery, setSearchQuery] = useState('');
   const [showStats, setShowStats] = useState(false);
   const [uploadColor, setUploadColor] = useState('neutral');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pendingFile, setPendingFile] = useState<{ section: string; dataUrl: string; name: string } | null>(null);
-  const customSections = storage.getCustomSections();
+  const customSections = storage.getCustomSections(email);
   const allSections = [...DEFAULT_SECTIONS, ...customSections];
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -70,25 +73,25 @@ export default function WardrobePage() {
       wornCount: 0,
       name: pendingFile.name,
     };
-    storage.addWardrobeItem(newItem);
-    setWardrobe(storage.getWardrobe());
+    storage.addWardrobeItem(email, newItem);
+    setWardrobe(storage.getWardrobe(email));
     setShowColorPicker(false);
     setPendingFile(null);
   };
 
   const handleDelete = (id: string) => {
-    storage.removeWardrobeItem(id);
-    setWardrobe(storage.getWardrobe());
+    storage.removeWardrobeItem(email, id);
+    setWardrobe(storage.getWardrobe(email));
   };
 
   const handleWorn = (id: string) => {
-    storage.incrementWorn(id);
-    setWardrobe(storage.getWardrobe());
+    storage.incrementWorn(email, id);
+    setWardrobe(storage.getWardrobe(email));
   };
 
   const handleAddSection = () => {
     if (newSectionName.trim()) {
-      storage.addCustomSection(newSectionName.trim());
+      storage.addCustomSection(email, newSectionName.trim());
       setNewSectionName('');
       setShowAddSection(false);
     }
@@ -108,29 +111,19 @@ export default function WardrobePage() {
             background: 'linear-gradient(180deg, hsl(25 20% 28%), hsl(25 18% 22%))',
             boxShadow: '0 -4px 12px hsl(25 20% 10% / 0.3)',
           }} />
-
           <div className="absolute inset-0 bg-gradient-to-b from-card to-secondary rounded-lg flex items-center justify-center">
             <p className="font-display text-lg text-muted-foreground animate-pulse-gold">Opening your wardrobe...</p>
           </div>
-
-          <div
-            className={`absolute left-0 top-0 w-1/2 h-full origin-left ${doorsOpen ? 'animate-door-open-left' : ''}`}
-            style={{ transformStyle: 'preserve-3d' }}
-          >
+          <div className={`absolute left-0 top-0 w-1/2 h-full origin-left ${doorsOpen ? 'animate-door-open-left' : ''}`} style={{ transformStyle: 'preserve-3d' }}>
             <div className="w-full h-full wardrobe-door rounded-l-lg flex items-center justify-end pr-3">
               <div className="w-3 h-16 rounded-full" style={{ background: 'linear-gradient(180deg, hsl(40 70% 55%), hsl(40 50% 40%))' }} />
             </div>
           </div>
-
-          <div
-            className={`absolute right-0 top-0 w-1/2 h-full origin-right ${doorsOpen ? 'animate-door-open-right' : ''}`}
-            style={{ transformStyle: 'preserve-3d' }}
-          >
+          <div className={`absolute right-0 top-0 w-1/2 h-full origin-right ${doorsOpen ? 'animate-door-open-right' : ''}`} style={{ transformStyle: 'preserve-3d' }}>
             <div className="w-full h-full wardrobe-door rounded-r-lg flex items-center pl-3">
               <div className="w-3 h-16 rounded-full" style={{ background: 'linear-gradient(180deg, hsl(40 70% 55%), hsl(40 50% 40%))' }} />
             </div>
           </div>
-
           <div className="absolute -bottom-2 left-0 right-0 h-4 rounded-b-xl" style={{
             background: 'linear-gradient(180deg, hsl(25 18% 22%), hsl(25 20% 18%))',
           }} />
@@ -152,15 +145,10 @@ export default function WardrobePage() {
           </div>
           <div className="flex flex-wrap gap-2 mb-4">
             {COLOR_OPTIONS.map(c => (
-              <button
-                key={c}
-                onClick={() => setUploadColor(c)}
+              <button key={c} onClick={() => setUploadColor(c)}
                 className={`px-3 py-1.5 rounded-full text-xs font-body capitalize transition-all ${
                   uploadColor === c ? 'bg-accent text-accent-foreground shadow-card' : 'bg-card border border-border text-foreground hover:border-accent/40'
-                }`}
-              >
-                {c}
-              </button>
+                }`}>{c}</button>
             ))}
           </div>
           <button onClick={confirmUpload} className="w-full gold-gradient text-primary font-body font-semibold py-3 rounded-xl text-sm shadow-luxury">
@@ -178,7 +166,6 @@ export default function WardrobePage() {
     return (
       <div className="px-4 py-6 max-w-lg mx-auto animate-fade-in">
         <input type="file" ref={fileInputRef} accept="image/*" className="hidden" />
-
         <div className="flex items-center gap-3 mb-4">
           <button onClick={() => { setActiveSection(null); setSearchQuery(''); }} className="p-2 rounded-xl bg-card border border-border hover:bg-muted transition-colors">
             <ChevronLeft size={18} />
@@ -191,29 +178,19 @@ export default function WardrobePage() {
             <Plus size={18} className="text-primary" />
           </button>
         </div>
-
-        {/* Search */}
         {allItems.length > 3 && (
           <div className="relative mb-4">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search items..."
-              className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2.5 text-foreground font-body text-sm focus:outline-none focus:ring-1 focus:ring-accent/50"
-            />
+            <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search items..."
+              className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2.5 text-foreground font-body text-sm focus:outline-none focus:ring-1 focus:ring-accent/50" />
           </div>
         )}
-
         {items.length === 0 && allItems.length === 0 ? (
           <div className="text-center py-16">
             <span className="text-5xl mb-4 block">{SECTION_EMOJIS[activeSection] || '📦'}</span>
             <h3 className="font-display text-lg font-bold text-foreground mb-1">Empty Section</h3>
             <p className="font-body text-sm text-muted-foreground mb-6">Add your first {activeSection.toLowerCase()} item</p>
-            <button
-              onClick={() => handleUpload(activeSection)}
-              className="px-6 py-3 rounded-xl gold-gradient text-primary font-body font-semibold text-sm shadow-luxury"
-            >
+            <button onClick={() => handleUpload(activeSection)} className="px-6 py-3 rounded-xl gold-gradient text-primary font-body font-semibold text-sm shadow-luxury">
               <Upload size={14} className="inline mr-2" />Upload Item
             </button>
           </div>
@@ -241,11 +218,8 @@ export default function WardrobePage() {
                 </div>
               </div>
             ))}
-
-            <button
-              onClick={() => handleUpload(activeSection)}
-              className="aspect-[3/4] rounded-xl border-2 border-dashed border-border hover:border-accent flex flex-col items-center justify-center gap-2 transition-colors bg-card/50"
-            >
+            <button onClick={() => handleUpload(activeSection)}
+              className="aspect-[3/4] rounded-xl border-2 border-dashed border-border hover:border-accent flex flex-col items-center justify-center gap-2 transition-colors bg-card/50">
               <Upload size={24} className="text-muted-foreground" />
               <span className="font-body text-xs text-muted-foreground">Add Item</span>
             </button>
@@ -259,18 +233,13 @@ export default function WardrobePage() {
   return (
     <div className="px-4 py-6 max-w-lg mx-auto animate-fade-in">
       <input type="file" ref={fileInputRef} accept="image/*" className="hidden" />
-
       <div className="flex items-center justify-between mb-2">
         <h1 className="font-display text-2xl font-bold text-foreground">Your Wardrobe</h1>
         <button onClick={() => setShowStats(!showStats)} className="p-2 rounded-xl bg-card border border-border hover:bg-muted transition-colors">
           <BarChart3 size={18} className="text-muted-foreground" />
         </button>
       </div>
-      <p className="font-body text-sm text-muted-foreground mb-4">
-        {totalItems} items · Tap a section to explore
-      </p>
-
-      {/* Stats panel */}
+      <p className="font-body text-sm text-muted-foreground mb-4">{totalItems} items · Tap a section to explore</p>
       {showStats && (
         <div className="bg-card rounded-2xl p-4 border border-border shadow-card mb-6 animate-scale-in">
           <h3 className="font-display text-sm font-bold text-foreground mb-3">Wardrobe Stats</h3>
@@ -298,18 +267,14 @@ export default function WardrobePage() {
           </div>
         </div>
       )}
-
       <div className="grid grid-cols-2 gap-4">
         {allSections.map((section, i) => {
           const items = sectionItems(section);
           const preview = items[0]?.image;
           return (
-            <button
-              key={section}
-              onClick={() => setActiveSection(section)}
+            <button key={section} onClick={() => setActiveSection(section)}
               className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-shelf transition-all duration-300 hover:scale-[1.03] hover:shadow-luxury group"
-              style={{ animationDelay: `${i * 0.08}s` }}
-            >
+              style={{ animationDelay: `${i * 0.08}s` }}>
               <div className="aspect-square flex flex-col items-center justify-center p-4 relative">
                 {preview ? (
                   <>
@@ -327,17 +292,12 @@ export default function WardrobePage() {
             </button>
           );
         })}
-
-        <button
-          onClick={() => setShowAddSection(true)}
-          className="aspect-square rounded-2xl border-2 border-dashed border-border hover:border-accent flex flex-col items-center justify-center gap-2 transition-colors"
-        >
+        <button onClick={() => setShowAddSection(true)}
+          className="aspect-square rounded-2xl border-2 border-dashed border-border hover:border-accent flex flex-col items-center justify-center gap-2 transition-colors">
           <Plus size={28} className="text-muted-foreground" />
           <span className="font-body text-xs text-muted-foreground">Add Section</span>
         </button>
       </div>
-
-      {/* Add Section Modal */}
       {showAddSection && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setShowAddSection(false)} />
@@ -346,18 +306,11 @@ export default function WardrobePage() {
               <X size={18} />
             </button>
             <h3 className="font-display text-lg font-bold mb-4 text-foreground">New Section</h3>
-            <input
-              value={newSectionName}
-              onChange={e => setNewSectionName(e.target.value)}
-              placeholder="e.g., Lehenga, Jackets"
+            <input value={newSectionName} onChange={e => setNewSectionName(e.target.value)} placeholder="e.g., Lehenga, Jackets"
               className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground font-body text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 mb-4"
-              onKeyDown={e => e.key === 'Enter' && handleAddSection()}
-            />
-            <button
-              onClick={handleAddSection}
-              disabled={!newSectionName.trim()}
-              className="w-full gold-gradient text-primary font-body font-semibold py-3 rounded-xl text-sm disabled:opacity-50 shadow-luxury"
-            >
+              onKeyDown={e => e.key === 'Enter' && handleAddSection()} />
+            <button onClick={handleAddSection} disabled={!newSectionName.trim()}
+              className="w-full gold-gradient text-primary font-body font-semibold py-3 rounded-xl text-sm disabled:opacity-50 shadow-luxury">
               Create Section
             </button>
           </div>

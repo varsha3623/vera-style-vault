@@ -1,10 +1,13 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { storage, type User } from '@/lib/storage';
 
+// Safe user type without password hash exposed to components
+type SafeUser = Omit<User, 'passwordHash'>;
+
 interface AuthContextType {
-  user: User | null;
-  login: (email: string, password: string) => string | null;
-  signup: (name: string, email: string, password: string) => string | null;
+  user: SafeUser | null;
+  login: (email: string, password: string) => Promise<string | null>;
+  signup: (name: string, email: string, password: string) => Promise<string | null>;
   logout: () => void;
   markOnboarded: () => void;
   refreshUser: () => void;
@@ -13,14 +16,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+function toSafeUser(u: User): SafeUser {
+  const { passwordHash: _, ...safe } = u;
+  return safe;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<SafeUser | null>(null);
 
   const refreshUser = useCallback(() => {
     const email = storage.getCurrentUser();
     if (email) {
       const u = storage.findUser(email);
-      if (u) setUser({ ...u });
+      if (u) setUser(toSafeUser(u));
     }
   }, []);
 
@@ -28,21 +36,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser();
   }, [refreshUser]);
 
-  const login = (email: string, password: string): string | null => {
+  const login = async (email: string, password: string): Promise<string | null> => {
     const u = storage.findUser(email);
     if (!u) return 'No account found with this email';
-    if (u.password !== password) return 'Incorrect password';
+    const valid = await storage.verifyPassword(u, password);
+    if (!valid) return 'Incorrect password';
     storage.setCurrentUser(email);
-    setUser({ ...u });
+    setUser(toSafeUser(u));
     return null;
   };
 
-  const signup = (name: string, email: string, password: string): string | null => {
+  const signup = async (name: string, email: string, password: string): Promise<string | null> => {
     if (storage.findUser(email)) return 'An account with this email already exists';
-    const newUser: User = { name, email, password, onboarded: false };
-    storage.addUser(newUser);
+    await storage.addUser(name, email, password);
     storage.setCurrentUser(email);
-    setUser({ ...newUser });
+    const newUser = storage.findUser(email);
+    if (newUser) setUser(toSafeUser(newUser));
     return null;
   };
 

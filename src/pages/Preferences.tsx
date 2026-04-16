@@ -5,7 +5,8 @@ import { MapPin, Briefcase, Palette, Shield, Save } from 'lucide-react';
 
 export default function Preferences() {
   const { user } = useAuth();
-  const existing = storage.getPreferences();
+  const email = user?.email || '';
+  const existing = storage.getPreferences(email);
   const [location, setLocation] = useState(existing?.location || '');
   const [lifestyle, setLifestyle] = useState<UserPreferences['lifestyle']>(existing?.lifestyle || 'corporate');
   const [style, setStyle] = useState<UserPreferences['style']>(existing?.style || 'elegant');
@@ -20,7 +21,7 @@ export default function Preferences() {
       style,
       restrictions: { sleevelessAllowed, shortOutfitsAllowed: shortAllowed },
     };
-    storage.setPreferences(prefs);
+    storage.setPreferences(email, prefs);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
