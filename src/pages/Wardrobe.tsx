@@ -244,16 +244,19 @@ export default function WardrobePage() {
                 {preview ? (
                   <>
                     <img src={preview} alt={section} className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-card via-card/70 to-transparent" />
                   </>
-                ) : null}
+                ) : (
+                  <div className="absolute inset-0 burgundy-gradient opacity-[0.04]" />
+                )}
                 <div className="relative z-10 text-center">
-                  <span className="text-3xl mb-2 block">{SECTION_EMOJIS[section] || '📦'}</span>
-                  <p className="font-display text-sm font-bold text-foreground">{section}</p>
-                  <p className="font-body text-[10px] text-muted-foreground mt-1">{items.length} items</p>
+                  <p className="font-display text-[10px] tracking-[0.3em] text-accent/80 mb-2">{SECTION_MONOGRAM[section] || '00'}</p>
+                  <p className="font-display text-base font-bold text-foreground tracking-wide">{section}</p>
+                  <div className="w-8 h-px bg-accent/40 mx-auto my-2" />
+                  <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest">{items.length} {items.length === 1 ? 'piece' : 'pieces'}</p>
                 </div>
               </div>
-              <div className="h-1.5 gold-gradient opacity-40" />
+              <div className="h-1 gold-gradient opacity-50" />
             </button>
           );
         })}
