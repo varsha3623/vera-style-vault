@@ -1,12 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { storage, type WardrobeItem } from '@/lib/storage';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Upload, X, ChevronLeft, Trash2, Search, BarChart3, Eye } from 'lucide-react';
 
 const DEFAULT_SECTIONS = ['Tops', 'Bottoms', 'Dresses', 'Traditional', 'Shoes', 'Accessories'];
 
-const SECTION_EMOJIS: Record<string, string> = {
-  Tops: '👚', Bottoms: '👖', Dresses: '👗', Traditional: '🥻', Shoes: '👠', Accessories: '💍',
+// Short, refined typographic monogram per section — no emoji.
+const SECTION_MONOGRAM: Record<string, string> = {
+  Tops: '01', Bottoms: '02', Dresses: '03', Traditional: '04', Shoes: '05', Accessories: '06',
 };
 
 const COLOR_OPTIONS = ['black', 'white', 'navy', 'beige', 'red', 'blue', 'green', 'pink', 'gray', 'brown', 'cream', 'denim', 'gold'];
@@ -14,8 +15,6 @@ const COLOR_OPTIONS = ['black', 'white', 'navy', 'beige', 'red', 'blue', 'green'
 export default function WardrobePage() {
   const { user } = useAuth();
   const email = user?.email || '';
-  const [phase, setPhase] = useState<'doors' | 'inside'>('doors');
-  const [doorsOpen, setDoorsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [showAddSection, setShowAddSection] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
@@ -28,12 +27,6 @@ export default function WardrobePage() {
   const customSections = storage.getCustomSections(email);
   const allSections = [...DEFAULT_SECTIONS, ...customSections];
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const t1 = setTimeout(() => setDoorsOpen(true), 300);
-    const t2 = setTimeout(() => setPhase('inside'), 1400);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, []);
 
   const sectionItems = (section: string) =>
     wardrobe.filter(i => i.type.toLowerCase() === section.toLowerCase());
@@ -101,36 +94,6 @@ export default function WardrobePage() {
   const totalWorn = wardrobe.reduce((a, b) => a + b.wornCount, 0);
   const mostWorn = wardrobe.length > 0 ? [...wardrobe].sort((a, b) => b.wornCount - a.wornCount)[0] : null;
   const leastWorn = wardrobe.length > 0 ? [...wardrobe].sort((a, b) => a.wornCount - b.wornCount)[0] : null;
-
-  // Phase 1: Wardrobe Doors
-  if (phase === 'doors') {
-    return (
-      <div className="fixed inset-0 z-40 bg-espresso flex items-center justify-center overflow-hidden">
-        <div className="relative w-[85vw] max-w-md h-[75vh] max-h-[600px]" style={{ perspective: '1200px' }}>
-          <div className="absolute -top-3 left-0 right-0 h-6 rounded-t-xl" style={{
-            background: 'linear-gradient(180deg, hsl(25 20% 28%), hsl(25 18% 22%))',
-            boxShadow: '0 -4px 12px hsl(25 20% 10% / 0.3)',
-          }} />
-          <div className="absolute inset-0 bg-gradient-to-b from-card to-secondary rounded-lg flex items-center justify-center">
-            <p className="font-display text-lg text-muted-foreground animate-pulse-gold">Opening your wardrobe...</p>
-          </div>
-          <div className={`absolute left-0 top-0 w-1/2 h-full origin-left ${doorsOpen ? 'animate-door-open-left' : ''}`} style={{ transformStyle: 'preserve-3d' }}>
-            <div className="w-full h-full wardrobe-door rounded-l-lg flex items-center justify-end pr-3">
-              <div className="w-3 h-16 rounded-full" style={{ background: 'linear-gradient(180deg, hsl(40 70% 55%), hsl(40 50% 40%))' }} />
-            </div>
-          </div>
-          <div className={`absolute right-0 top-0 w-1/2 h-full origin-right ${doorsOpen ? 'animate-door-open-right' : ''}`} style={{ transformStyle: 'preserve-3d' }}>
-            <div className="w-full h-full wardrobe-door rounded-r-lg flex items-center pl-3">
-              <div className="w-3 h-16 rounded-full" style={{ background: 'linear-gradient(180deg, hsl(40 70% 55%), hsl(40 50% 40%))' }} />
-            </div>
-          </div>
-          <div className="absolute -bottom-2 left-0 right-0 h-4 rounded-b-xl" style={{
-            background: 'linear-gradient(180deg, hsl(25 18% 22%), hsl(25 20% 18%))',
-          }} />
-        </div>
-      </div>
-    );
-  }
 
   // Color picker modal
   if (showColorPicker && pendingFile) {
