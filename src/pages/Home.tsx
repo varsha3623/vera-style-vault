@@ -3,18 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { storage } from '@/lib/storage';
 import { useAuth } from '@/contexts/AuthContext';
 import { generateOutfits } from '@/lib/recommendations';
-import { Calendar as CalendarIcon, Cloud, Sun, CloudRain, Snowflake, Wind, Plus, MapPin, Shirt, Sparkles, TrendingUp } from 'lucide-react';
-
-interface WeatherData {
-  temp: number;
-  condition: string;
-  icon: string;
-}
+import { getWeather, type WeatherData } from '@/lib/weather';
+import { Calendar as CalendarIcon, Cloud, Sun, CloudRain, Snowflake, Wind, Plus, MapPin, Shirt, Sparkles, TrendingUp, CloudFog, CloudLightning } from 'lucide-react';
 
 const WeatherIcon = ({ condition }: { condition: string }) => {
   const c = condition.toLowerCase();
-  if (c.includes('rain')) return <CloudRain className="text-accent" size={28} />;
+  if (c.includes('thunder')) return <CloudLightning className="text-accent" size={28} />;
+  if (c.includes('rain') || c.includes('drizzle')) return <CloudRain className="text-accent" size={28} />;
   if (c.includes('snow')) return <Snowflake className="text-accent" size={28} />;
+  if (c.includes('fog')) return <CloudFog className="text-accent" size={28} />;
   if (c.includes('cloud')) return <Cloud className="text-accent" size={28} />;
   if (c.includes('wind')) return <Wind className="text-accent" size={28} />;
   return <Sun className="text-accent" size={28} />;
