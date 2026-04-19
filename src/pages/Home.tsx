@@ -4,18 +4,8 @@ import { storage } from '@/lib/storage';
 import { useAuth } from '@/contexts/AuthContext';
 import { generateOutfits } from '@/lib/recommendations';
 import { getWeather, type WeatherData } from '@/lib/weather';
-import { Calendar as CalendarIcon, Cloud, Sun, CloudRain, Snowflake, Wind, Plus, MapPin, Shirt, Sparkles, TrendingUp, CloudFog, CloudLightning } from 'lucide-react';
-
-const WeatherIcon = ({ condition }: { condition: string }) => {
-  const c = condition.toLowerCase();
-  if (c.includes('thunder')) return <CloudLightning className="text-accent" size={28} />;
-  if (c.includes('rain') || c.includes('drizzle')) return <CloudRain className="text-accent" size={28} />;
-  if (c.includes('snow')) return <Snowflake className="text-accent" size={28} />;
-  if (c.includes('fog')) return <CloudFog className="text-accent" size={28} />;
-  if (c.includes('cloud')) return <Cloud className="text-accent" size={28} />;
-  if (c.includes('wind')) return <Wind className="text-accent" size={28} />;
-  return <Sun className="text-accent" size={28} />;
-};
+import { Calendar as CalendarIcon, Plus, MapPin, Shirt, Sparkles, TrendingUp } from 'lucide-react';
+import LuxuryHero from '@/components/LuxuryHero';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -88,28 +78,18 @@ export default function HomePage() {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-8">
-      {/* Greeting + Weather */}
+      {/* Luxury 3D Hero */}
       <div className="animate-fade-in">
-        <h1 className="font-display text-2xl font-bold text-foreground">{greeting()}, {user?.name?.split(' ')[0] || 'there'}!</h1>
-        <p className="font-body text-sm text-muted-foreground mt-1">Let's find your perfect outfit today</p>
-      </div>
-
-      <div className="flex gap-3 animate-fade-in" style={{ animationDelay: '0.05s' }}>
-        <div className="flex-1 flex items-center gap-3 p-4 bg-card rounded-2xl shadow-card border border-border/50">
-          <WeatherIcon condition={weather.condition} />
-          <div>
-            <p className="font-display text-xl font-bold text-foreground">{weather.temp}°C</p>
-            <p className="font-body text-[10px] text-muted-foreground">{weather.condition}</p>
-          </div>
-        </div>
-        <div className="flex-1 p-4 bg-card rounded-2xl shadow-card border border-border/50 text-right">
-          <p className="font-display text-xl font-bold text-foreground">
-            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </p>
-          <p className="font-body text-[10px] text-muted-foreground truncate">
-            {prefs?.location || 'Set location'}
-          </p>
-        </div>
+        <LuxuryHero
+          name={`${greeting()}, ${user?.name?.split(' ')[0] || 'there'}`}
+          greeting="Today's Forecast"
+          weather={weather}
+          time={time}
+          location={prefs?.location}
+        />
+        <p className="font-body text-xs text-muted-foreground mt-3 text-center italic">
+          Let's curate your perfect look
+        </p>
       </div>
 
       {/* Quick actions */}
