@@ -150,7 +150,9 @@ export default function WardrobePage() {
         )}
         {items.length === 0 && allItems.length === 0 ? (
           <div className="text-center py-16">
-            <span className="text-5xl mb-4 block">{SECTION_EMOJIS[activeSection] || '📦'}</span>
+            <div className="mx-auto mb-5 w-16 h-16 rounded-full border border-accent/40 flex items-center justify-center">
+              <span className="font-display text-xl text-accent tracking-widest">{SECTION_MONOGRAM[activeSection] || '00'}</span>
+            </div>
             <h3 className="font-display text-lg font-bold text-foreground mb-1">Empty Section</h3>
             <p className="font-body text-sm text-muted-foreground mb-6">Add your first {activeSection.toLowerCase()} item</p>
             <button onClick={() => handleUpload(activeSection)} className="px-6 py-3 rounded-xl gold-gradient text-primary font-body font-semibold text-sm shadow-luxury">
