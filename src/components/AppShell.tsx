@@ -1,12 +1,42 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Home, ShirtIcon, Sparkles, MessageCircle, Menu, Heart, X, User, Settings, Mail, Star, LogOut } from 'lucide-react';
+
+// Tabs that participate in horizontal swipe navigation, in order.
+const SWIPE_ROUTES = ['/', '/wardrobe', '/outfits', '/chat'];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sideMenuOpen, setSideMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  // Touch swipe state — only horizontal gestures with low vertical drift navigate.
+  const touchStart = useRef<{ x: number; y: number; t: number } | null>(null);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const elapsed = Date.now() - start.t;
+    if (elapsed > 600) return;
+    if (Math.abs(dx) < 70) return;
+    if (Math.abs(dy) > Math.abs(dx) * 0.6) return; // ignore mostly-vertical swipes
+    const idx = SWIPE_ROUTES.indexOf(location.pathname);
+    if (idx === -1) return;
+    const nextIdx = dx < 0 ? idx + 1 : idx - 1;
+    if (nextIdx < 0 || nextIdx >= SWIPE_ROUTES.length) return;
+    navigate(SWIPE_ROUTES[nextIdx]);
+  };
 
   const navItems = [
     { path: '/', icon: Home, label: 'Home' },
@@ -23,7 +53,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       {/* Top Bar */}
       <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
         <div className="flex items-center justify-between px-4 h-14">
