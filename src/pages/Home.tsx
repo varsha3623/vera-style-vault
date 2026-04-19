@@ -21,7 +21,7 @@ export default function HomePage() {
   const { user } = useAuth();
   const email = user?.email || '';
   const navigate = useNavigate();
-  const [weather, setWeather] = useState<WeatherData>({ temp: 24, condition: 'Clear', icon: '01d' });
+  const [weather, setWeather] = useState<WeatherData>({ temp: 24, condition: 'Clear', code: 0 });
   const [time, setTime] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState('');
   const [showEventForm, setShowEventForm] = useState(false);
@@ -36,15 +36,13 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, []);
 
+  // Real weather via Open-Meteo (no API key). Tries GPS, falls back to preferences city.
   useEffect(() => {
-    if (prefs?.location) {
-      fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(prefs.location)}&units=metric&appid=demo`)
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (data?.main) setWeather({ temp: Math.round(data.main.temp), condition: data.weather[0]?.main || 'Clear', icon: data.weather[0]?.icon || '01d' });
-        })
-        .catch(() => {});
-    }
+    let cancelled = false;
+    getWeather(prefs?.location).then(w => {
+      if (!cancelled && w) setWeather(w);
+    });
+    return () => { cancelled = true; };
   }, [prefs?.location]);
 
   const outfits = useMemo(() =>
