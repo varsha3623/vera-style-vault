@@ -64,26 +64,38 @@ export default function LuxuryHero({ name, greeting, weather, time, location }: 
 
   const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+  // Smooth nightness ∈ [0,1] from hour-of-day. Dawn ≈ 5–7, dusk ≈ 18–20.
+  const nightness = (() => {
+    const h = time.getHours() + time.getMinutes() / 60;
+    if (h >= 7 && h <= 18) return 0;
+    if (h >= 20 || h <= 5) return 1;
+    if (h > 18 && h < 20) return (h - 18) / 2; // dusk ramp up
+    return 1 - (h - 5) / 2; // dawn ramp down
+  })();
+
+  const heroBg = nightness < 0.5
+    ? `radial-gradient(120% 100% at 30% 0%, hsl(var(--burgundy-light)/${0.35 - nightness * 0.2}) 0%, hsl(var(--burgundy)/${0.55 + nightness * 0.1}) 45%, hsl(var(--espresso)/${0.85 + nightness * 0.1}) 100%)`
+    : `radial-gradient(120% 100% at 30% 0%, hsl(240 45% 22% / 0.55) 0%, hsl(260 50% 12% / 0.85) 50%, hsl(250 60% 5% / 0.95) 100%)`;
+
   return (
     <div
       ref={wrapRef}
       className="relative w-full h-72 rounded-3xl overflow-hidden shadow-luxury border border-border/40"
-      style={{
-        background:
-          'radial-gradient(120% 100% at 30% 0%, hsl(var(--burgundy-light)/0.35) 0%, hsl(var(--burgundy)/0.55) 45%, hsl(var(--espresso)/0.85) 100%)',
-      }}
+      style={{ background: heroBg, transition: 'background 1.2s ease-out' }}
     >
       {/* 3D scene layer — lazy-loaded to keep initial bundle small */}
       <Suspense fallback={<HeroSceneFallback />}>
-        <WeatherHero3D weather={weather} parallax={parallax} />
+        <WeatherHero3D weather={weather} parallax={parallax} nightness={nightness} />
       </Suspense>
 
-      {/* Subtle gold grain overlay */}
+      {/* Subtle gold grain overlay (warmer by day, cooler by night) */}
       <div
-        className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-40"
+        className="absolute inset-0 pointer-events-none mix-blend-overlay"
         style={{
+          opacity: 0.4 - nightness * 0.15,
           background:
             'radial-gradient(60% 50% at 70% 20%, hsl(var(--gold)/0.35) 0%, transparent 60%)',
+          transition: 'opacity 1.2s ease-out',
         }}
       />
 
