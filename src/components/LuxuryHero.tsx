@@ -1,7 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
-import WeatherHero3D from './WeatherHero3D';
+import { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import type { WeatherData } from '@/lib/weather';
 import { MapPin } from 'lucide-react';
+
+// Code-split the heavy 3D scene (three / @react-three/fiber / drei) into its own chunk.
+// It only loads after the hero mounts, keeping the initial bundle lean for mobile.
+const WeatherHero3D = lazy(() => import('./WeatherHero3D'));
+
+function HeroSceneFallback() {
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      {/* Soft animated gold glow placeholder while the 3D scene loads */}
+      <div
+        className="absolute inset-0 opacity-60 animate-pulse"
+        style={{
+          background:
+            'radial-gradient(50% 40% at 70% 25%, hsl(var(--gold)/0.45) 0%, transparent 70%)',
+        }}
+      />
+    </div>
+  );
+}
 
 type Props = {
   name: string;
@@ -55,8 +73,10 @@ export default function LuxuryHero({ name, greeting, weather, time, location }: 
           'radial-gradient(120% 100% at 30% 0%, hsl(var(--burgundy-light)/0.35) 0%, hsl(var(--burgundy)/0.55) 45%, hsl(var(--espresso)/0.85) 100%)',
       }}
     >
-      {/* 3D scene layer */}
-      <WeatherHero3D weather={weather} parallax={parallax} />
+      {/* 3D scene layer — lazy-loaded to keep initial bundle small */}
+      <Suspense fallback={<HeroSceneFallback />}>
+        <WeatherHero3D weather={weather} parallax={parallax} />
+      </Suspense>
 
       {/* Subtle gold grain overlay */}
       <div
