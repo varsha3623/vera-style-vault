@@ -79,7 +79,7 @@ export default function Profile() {
               Edit
             </Link>
           </div>
-          <div className="space-y-0">
+          <div>
             {[
               { label: 'Location', value: prefs.location || '—' },
               { label: 'Lifestyle', value: prefs.lifestyle },
@@ -87,16 +87,14 @@ export default function Profile() {
               { label: 'Sleeveless', value: prefs.restrictions.sleevelessAllowed ? 'Allowed' : 'Not allowed' },
               { label: 'Short outfits', value: prefs.restrictions.shortOutfitsAllowed ? 'Allowed' : 'Not allowed' },
             ].map((item, i, arr) => (
-              <div key={item.label} className="flex justify-between items-center py-2.5">
-                <span className="font-body text-[11px] uppercase tracking-wider text-muted-foreground">{item.label}</span>
-                <span className="font-body text-sm text-foreground capitalize">{item.value}</span>
-                {i < arr.length - 1 && <div className="absolute" />}
+              <div key={item.label}>
+                <div className="flex justify-between items-center py-2.5">
+                  <span className="font-body text-[11px] uppercase tracking-wider text-muted-foreground">{item.label}</span>
+                  <span className="font-body text-sm text-foreground capitalize">{item.value}</span>
+                </div>
+                {i < arr.length - 1 && <div className="h-px bg-border/40" />}
               </div>
-            )).reduce<React.ReactNode[]>((acc, el, i) => {
-              acc.push(el);
-              if (i < 4) acc.push(<div key={`hr-${i}`} className="h-px bg-border/40" />);
-              return acc;
-            }, [])}
+            ))}
           </div>
         </div>
       )}
