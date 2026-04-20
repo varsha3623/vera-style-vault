@@ -19,4 +19,25 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Isolate the 3D stack so it only loads with the hero
+          three: ["three"],
+          "react-three": ["@react-three/fiber", "@react-three/drei"],
+          // Split common UI/vendor for better caching
+          radix: [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-toast",
+            "@radix-ui/react-tooltip",
+          ],
+        },
+      },
+    },
+  },
 }));
