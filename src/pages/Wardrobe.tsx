@@ -1,11 +1,13 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { storage, type WardrobeItem } from '@/lib/storage';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Upload, X, ChevronLeft, Trash2, Search, BarChart3, Eye } from 'lucide-react';
+import { Plus, Upload, X, Search, BarChart3 } from 'lucide-react';
+import CategoryTabs from '@/components/wardrobe/CategoryTabs';
+import ShelfCarousel from '@/components/wardrobe/ShelfCarousel';
+import ItemDrawer from '@/components/wardrobe/ItemDrawer';
 
 const DEFAULT_SECTIONS = ['Tops', 'Bottoms', 'Dresses', 'Traditional', 'Shoes', 'Accessories'];
 
-// Short, refined typographic monogram per section — no emoji.
 const SECTION_MONOGRAM: Record<string, string> = {
   Tops: '01', Bottoms: '02', Dresses: '03', Traditional: '04', Shoes: '05', Accessories: '06',
 };
@@ -15,30 +17,38 @@ const COLOR_OPTIONS = ['black', 'white', 'navy', 'beige', 'red', 'blue', 'green'
 export default function WardrobePage() {
   const { user } = useAuth();
   const email = user?.email || '';
-  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [wardrobe, setWardrobe] = useState(storage.getWardrobe(email));
+  const customSections = storage.getCustomSections(email);
+  const allSections = useMemo(() => [...DEFAULT_SECTIONS, ...customSections], [customSections]);
+
+  const [activeSection, setActiveSection] = useState<string>(allSections[0]);
   const [showAddSection, setShowAddSection] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
-  const [wardrobe, setWardrobe] = useState(storage.getWardrobe(email));
   const [searchQuery, setSearchQuery] = useState('');
   const [showStats, setShowStats] = useState(false);
   const [uploadColor, setUploadColor] = useState('neutral');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pendingFile, setPendingFile] = useState<{ section: string; dataUrl: string; name: string } | null>(null);
-  const customSections = storage.getCustomSections(email);
-  const allSections = [...DEFAULT_SECTIONS, ...customSections];
+  const [selectedItem, setSelectedItem] = useState<WardrobeItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const counts = useMemo(() => {
+    const c: Record<string, number> = {};
+    allSections.forEach(s => { c[s] = wardrobe.filter(i => i.type.toLowerCase() === s.toLowerCase()).length; });
+    return c;
+  }, [wardrobe, allSections]);
 
   const sectionItems = (section: string) =>
     wardrobe.filter(i => i.type.toLowerCase() === section.toLowerCase());
 
-  const filteredItems = (section: string) => {
-    const items = sectionItems(section);
+  const filteredItems = useMemo(() => {
+    const items = sectionItems(activeSection);
     if (!searchQuery) return items;
     const q = searchQuery.toLowerCase();
     return items.filter(i => (i.name || i.type).toLowerCase().includes(q) || i.color.toLowerCase().includes(q));
-  };
+  }, [wardrobe, activeSection, searchQuery]);
 
-  const handleUpload = (section: string) => {
+  const handleUpload = () => {
     const input = fileInputRef.current;
     if (!input) return;
     input.onchange = (e) => {
@@ -46,7 +56,7 @@ export default function WardrobePage() {
       if (!file) return;
       const reader = new FileReader();
       reader.onload = () => {
-        setPendingFile({ section, dataUrl: reader.result as string, name: file.name.replace(/\.[^.]+$/, '') });
+        setPendingFile({ section: activeSection, dataUrl: reader.result as string, name: file.name.replace(/\.[^.]+$/, '') });
         setUploadColor('neutral');
         setShowColorPicker(true);
       };
@@ -94,178 +104,134 @@ export default function WardrobePage() {
   const totalWorn = wardrobe.reduce((a, b) => a + b.wornCount, 0);
   const mostWorn = wardrobe.length > 0 ? [...wardrobe].sort((a, b) => b.wornCount - a.wornCount)[0] : null;
   const leastWorn = wardrobe.length > 0 ? [...wardrobe].sort((a, b) => a.wornCount - b.wornCount)[0] : null;
+  const showSearch = sectionItems(activeSection).length > 3;
 
-  // Color picker modal
-  if (showColorPicker && pendingFile) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-        <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => { setShowColorPicker(false); setPendingFile(null); }} />
-        <div className="relative bg-background border border-border rounded-2xl p-6 w-full max-w-sm shadow-luxury animate-scale-in">
-          <h3 className="font-display text-lg font-bold mb-2 text-foreground">Add Item</h3>
-          <p className="font-body text-xs text-muted-foreground mb-4">Select the dominant color</p>
-          <div className="w-full h-32 rounded-xl overflow-hidden mb-4 bg-card">
-            <img src={pendingFile.dataUrl} alt="" className="w-full h-full object-contain" />
-          </div>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {COLOR_OPTIONS.map(c => (
-              <button key={c} onClick={() => setUploadColor(c)}
-                className={`px-3 py-1.5 rounded-full text-xs font-body capitalize transition-all ${
-                  uploadColor === c ? 'bg-accent text-accent-foreground shadow-card' : 'bg-card border border-border text-foreground hover:border-accent/40'
-                }`}>{c}</button>
-            ))}
-          </div>
-          <button onClick={confirmUpload} className="w-full gold-gradient text-primary font-body font-semibold py-3 rounded-xl text-sm shadow-luxury">
-            Add to Wardrobe
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Section detail view
-  if (activeSection) {
-    const items = filteredItems(activeSection);
-    const allItems = sectionItems(activeSection);
-    return (
-      <div className="px-4 py-6 max-w-lg mx-auto animate-fade-in">
-        <input type="file" ref={fileInputRef} accept="image/*" className="hidden" />
-        <div className="flex items-center gap-3 mb-4">
-          <button onClick={() => { setActiveSection(null); setSearchQuery(''); }} className="p-2 rounded-xl bg-card border border-border hover:bg-muted transition-colors">
-            <ChevronLeft size={18} />
-          </button>
-          <div className="flex-1">
-            <h1 className="font-display text-xl font-bold text-foreground">{activeSection}</h1>
-            <p className="font-body text-xs text-muted-foreground">{allItems.length} items</p>
-          </div>
-          <button onClick={() => handleUpload(activeSection)} className="p-2 rounded-xl gold-gradient">
-            <Plus size={18} className="text-primary" />
-          </button>
-        </div>
-        {allItems.length > 3 && (
-          <div className="relative mb-4">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search items..."
-              className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2.5 text-foreground font-body text-sm focus:outline-none focus:ring-1 focus:ring-accent/50" />
-          </div>
-        )}
-        {items.length === 0 && allItems.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="mx-auto mb-5 w-16 h-16 rounded-full border border-accent/40 flex items-center justify-center">
-              <span className="font-display text-xl text-accent tracking-widest">{SECTION_MONOGRAM[activeSection] || '00'}</span>
-            </div>
-            <h3 className="font-display text-lg font-bold text-foreground mb-1">Empty Section</h3>
-            <p className="font-body text-sm text-muted-foreground mb-6">Add your first {activeSection.toLowerCase()} item</p>
-            <button onClick={() => handleUpload(activeSection)} className="px-6 py-3 rounded-xl gold-gradient text-primary font-body font-semibold text-sm shadow-luxury">
-              <Upload size={14} className="inline mr-2" />Upload Item
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-4">
-            {items.map(item => (
-              <div key={item.id} className="relative group">
-                <div className="aspect-[3/4] rounded-xl overflow-hidden bg-card shadow-shelf border border-border/50 transition-transform duration-300 hover:scale-[1.03]">
-                  <img src={item.image} alt={item.name || item.type} className="w-full h-full object-cover" />
-                  <div className="absolute bottom-0 left-0 right-0 p-2.5 glass">
-                    <p className="font-body text-xs text-foreground truncate">{item.name || item.type}</p>
-                    <div className="flex items-center justify-between mt-0.5">
-                      <p className="font-body text-[10px] text-muted-foreground capitalize">{item.color}</p>
-                      <p className="font-body text-[10px] text-muted-foreground">Worn {item.wornCount}×</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleWorn(item.id)} className="p-1.5 rounded-full bg-background/80 text-accent" title="Mark as worn">
-                    <Eye size={14} />
-                  </button>
-                  <button onClick={() => handleDelete(item.id)} className="p-1.5 rounded-full bg-background/80 text-destructive" title="Delete">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-            <button onClick={() => handleUpload(activeSection)}
-              className="aspect-[3/4] rounded-xl border-2 border-dashed border-border hover:border-accent flex flex-col items-center justify-center gap-2 transition-colors bg-card/50">
-              <Upload size={24} className="text-muted-foreground" />
-              <span className="font-body text-xs text-muted-foreground">Add Item</span>
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Sections overview
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto animate-fade-in">
+    <div className="px-4 py-6 max-w-lg mx-auto animate-fade-in pb-12">
       <input type="file" ref={fileInputRef} accept="image/*" className="hidden" />
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="font-display text-2xl font-bold text-foreground">Your Wardrobe</h1>
-        <button onClick={() => setShowStats(!showStats)} className="p-2 rounded-xl bg-card border border-border hover:bg-muted transition-colors">
-          <BarChart3 size={18} className="text-muted-foreground" />
-        </button>
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-1">
+        <div>
+          <p className="font-display text-[10px] tracking-[0.35em] text-accent/80 uppercase mb-1">Atelier</p>
+          <h1 className="font-display text-3xl font-bold text-foreground">Your Wardrobe</h1>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setShowStats(!showStats)} className={`p-2.5 rounded-xl border transition-all ${showStats ? 'gold-gradient border-transparent text-primary' : 'bg-card border-border hover:border-accent/40'}`}>
+            <BarChart3 size={16} />
+          </button>
+          <button onClick={() => setShowAddSection(true)} className="p-2.5 rounded-xl bg-card border border-border hover:border-accent/40 transition-colors">
+            <Plus size={16} />
+          </button>
+        </div>
       </div>
-      <p className="font-body text-sm text-muted-foreground mb-4">{totalItems} items · Tap a section to explore</p>
+      <p className="font-body text-xs text-muted-foreground mb-5">{totalItems} pieces · {totalWorn} total wears</p>
+
+      {/* Stats panel */}
       {showStats && (
-        <div className="bg-card rounded-2xl p-4 border border-border shadow-card mb-6 animate-scale-in">
-          <h3 className="font-display text-sm font-bold text-foreground mb-3">Wardrobe Stats</h3>
+        <div className="bg-card rounded-2xl p-4 border border-border shadow-card mb-5 animate-scale-in">
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-background rounded-xl p-3 text-center">
-              <p className="font-display text-xl font-bold text-foreground">{totalItems}</p>
-              <p className="font-body text-[10px] text-muted-foreground uppercase tracking-wider">Total Items</p>
+            <div className="bg-background rounded-xl p-3 text-center border border-border/50">
+              <p className="font-display text-2xl font-bold text-foreground">{totalItems}</p>
+              <p className="font-body text-[10px] text-muted-foreground uppercase tracking-wider">Pieces</p>
             </div>
-            <div className="bg-background rounded-xl p-3 text-center">
-              <p className="font-display text-xl font-bold text-foreground">{totalWorn}</p>
-              <p className="font-body text-[10px] text-muted-foreground uppercase tracking-wider">Total Wears</p>
+            <div className="bg-background rounded-xl p-3 text-center border border-border/50">
+              <p className="font-display text-2xl font-bold text-foreground">{totalWorn}</p>
+              <p className="font-body text-[10px] text-muted-foreground uppercase tracking-wider">Wears</p>
             </div>
             {mostWorn && (
-              <div className="bg-background rounded-xl p-3 col-span-2">
-                <p className="font-body text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Most Worn</p>
+              <div className="bg-background rounded-xl p-3 col-span-2 border border-border/50">
+                <p className="font-body text-[10px] text-accent uppercase tracking-wider mb-1">Most Worn</p>
                 <p className="font-body text-sm text-foreground">{mostWorn.name || mostWorn.type} ({mostWorn.wornCount}×)</p>
               </div>
             )}
             {leastWorn && leastWorn.wornCount === 0 && (
               <div className="bg-accent/10 rounded-xl p-3 col-span-2 border border-accent/20">
                 <p className="font-body text-[10px] text-accent uppercase tracking-wider mb-1">Never Worn</p>
-                <p className="font-body text-sm text-foreground">{leastWorn.name || leastWorn.type} — try it today!</p>
+                <p className="font-body text-sm text-foreground">{leastWorn.name || leastWorn.type} — try it today</p>
               </div>
             )}
           </div>
         </div>
       )}
-      <div className="grid grid-cols-2 gap-4">
-        {allSections.map((section, i) => {
-          const items = sectionItems(section);
-          const preview = items[0]?.image;
-          return (
-            <button key={section} onClick={() => setActiveSection(section)}
-              className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-shelf transition-all duration-300 hover:scale-[1.03] hover:shadow-luxury group"
-              style={{ animationDelay: `${i * 0.08}s` }}>
-              <div className="aspect-square flex flex-col items-center justify-center p-4 relative">
-                {preview ? (
-                  <>
-                    <img src={preview} alt={section} className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-card via-card/70 to-transparent" />
-                  </>
-                ) : (
-                  <div className="absolute inset-0 burgundy-gradient opacity-[0.04]" />
-                )}
-                <div className="relative z-10 text-center">
-                  <p className="font-display text-[10px] tracking-[0.3em] text-accent/80 mb-2">{SECTION_MONOGRAM[section] || '00'}</p>
-                  <p className="font-display text-base font-bold text-foreground tracking-wide">{section}</p>
-                  <div className="w-8 h-px bg-accent/40 mx-auto my-2" />
-                  <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest">{items.length} {items.length === 1 ? 'piece' : 'pieces'}</p>
-                </div>
-              </div>
-              <div className="h-1 gold-gradient opacity-50" />
-            </button>
-          );
-        })}
-        <button onClick={() => setShowAddSection(true)}
-          className="aspect-square rounded-2xl border-2 border-dashed border-border hover:border-accent flex flex-col items-center justify-center gap-2 transition-colors">
-          <Plus size={28} className="text-muted-foreground" />
-          <span className="font-body text-xs text-muted-foreground">Add Section</span>
+
+      {/* Gold-accented category tabs */}
+      <CategoryTabs
+        sections={allSections}
+        active={activeSection}
+        counts={counts}
+        monogram={SECTION_MONOGRAM}
+        onSelect={(s) => { setActiveSection(s); setSearchQuery(''); }}
+      />
+
+      <div className="h-px gold-hairline my-3" />
+
+      {/* Search */}
+      {showSearch && (
+        <div className="relative mb-4">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder={`Search ${activeSection.toLowerCase()}...`}
+            className="w-full bg-card border border-border rounded-xl pl-9 pr-4 py-2 text-foreground font-body text-xs focus:outline-none focus:ring-1 focus:ring-accent/50"
+          />
+        </div>
+      )}
+
+      {/* 3D shelf carousel */}
+      <ShelfCarousel
+        items={filteredItems}
+        onSelect={setSelectedItem}
+        onUpload={handleUpload}
+      />
+
+      {/* Upload CTA */}
+      {filteredItems.length > 0 && (
+        <button
+          onClick={handleUpload}
+          className="mt-4 w-full py-3 rounded-xl border border-dashed border-accent/40 bg-card/50 hover:bg-accent/5 transition-colors flex items-center justify-center gap-2 font-body text-xs text-foreground/80"
+        >
+          <Upload size={14} className="text-accent" />
+          Add another {activeSection.toLowerCase().replace(/s$/, '')}
         </button>
-      </div>
+      )}
+
+      {/* Detail drawer */}
+      <ItemDrawer
+        item={selectedItem}
+        onClose={() => setSelectedItem(null)}
+        onWorn={handleWorn}
+        onDelete={handleDelete}
+        totalWornInWardrobe={totalWorn}
+      />
+
+      {/* Color picker modal */}
+      {showColorPicker && pendingFile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => { setShowColorPicker(false); setPendingFile(null); }} />
+          <div className="relative bg-background border border-border rounded-2xl p-6 w-full max-w-sm shadow-luxury animate-scale-in">
+            <h3 className="font-display text-lg font-bold mb-2 text-foreground">Add Item</h3>
+            <p className="font-body text-xs text-muted-foreground mb-4">Select the dominant color</p>
+            <div className="w-full h-32 rounded-xl overflow-hidden mb-4 bg-card">
+              <img src={pendingFile.dataUrl} alt="" className="w-full h-full object-contain" />
+            </div>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {COLOR_OPTIONS.map(c => (
+                <button key={c} onClick={() => setUploadColor(c)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-body capitalize transition-all ${
+                    uploadColor === c ? 'gold-gradient text-primary shadow-card' : 'bg-card border border-border text-foreground hover:border-accent/40'
+                  }`}>{c}</button>
+              ))}
+            </div>
+            <button onClick={confirmUpload} className="w-full gold-gradient text-primary font-body font-semibold py-3 rounded-xl text-sm shadow-luxury">
+              Add to Wardrobe
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add section modal */}
       {showAddSection && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setShowAddSection(false)} />
