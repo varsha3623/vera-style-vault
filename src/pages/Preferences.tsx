@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { storage, type UserPreferences } from '@/lib/storage';
 import { useAuth } from '@/contexts/AuthContext';
-import { MapPin, Briefcase, Palette, Shield, Save, Check } from 'lucide-react';
+import { MapPin, Briefcase, Palette, Shield, Save, Check, type LucideIcon } from 'lucide-react';
 
 export default function Preferences() {
   const { user } = useAuth();
@@ -100,7 +100,7 @@ function PreferenceCard({
   title,
   children,
 }: {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   title: string;
   children: React.ReactNode;
 }) {
