@@ -189,47 +189,112 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Calendar */}
+      {/* Calendar — collapsible */}
       <div className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-lg font-bold text-foreground">{currentMonth}</h2>
-          <CalendarIcon size={18} className="text-muted-foreground" />
-        </div>
-
-        <div className="bg-card rounded-2xl shadow-card p-4 border border-border/50">
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {dayLabels.map(d => (
-              <div key={d} className="text-center text-[10px] font-body text-muted-foreground font-medium py-1">{d}</div>
-            ))}
+        <button
+          onClick={() => setCalendarOpen(o => !o)}
+          aria-expanded={calendarOpen}
+          className="w-full flex items-center justify-between p-4 bg-card rounded-2xl shadow-card border border-border/50 hover:shadow-luxury transition-shadow"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl gold-gradient flex items-center justify-center flex-shrink-0">
+              <CalendarIcon size={18} className="text-primary" />
+            </div>
+            <div className="text-left">
+              <p className="font-display text-sm font-bold text-foreground">{currentMonthLabel}</p>
+              <p className="font-body text-[10px] text-muted-foreground">
+                {events.length} {events.length === 1 ? 'event' : 'events'} planned
+              </p>
+            </div>
           </div>
-          <div className="grid grid-cols-7 gap-1">
-            {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
-            {Array.from({ length: daysInMonth }, (_, i) => {
-              const day = i + 1;
-              const dateStr = formatDate(day);
-              const isToday = day === today.getDate();
-              const hasEvent = events.some(e => e.date === dateStr);
-              const isSelected = selectedDate === dateStr;
+          <ChevronDown
+            size={18}
+            className={`text-muted-foreground transition-transform duration-300 ${calendarOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
 
-              return (
-                <button
-                  key={day}
-                  onClick={() => { setSelectedDate(dateStr); setShowEventForm(true); }}
-                  className={`relative aspect-square flex items-center justify-center rounded-lg text-xs font-body transition-all ${
-                    isToday ? 'gold-gradient text-primary font-bold' :
-                    isSelected ? 'bg-accent/20 text-accent font-medium' :
-                    'text-foreground hover:bg-muted'
-                  }`}
-                >
-                  {day}
-                  {hasEvent && <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-accent" />}
-                </button>
-              );
-            })}
+        {calendarOpen && (
+          <div className="mt-3 bg-card rounded-2xl shadow-card p-4 border border-border/50 animate-scale-in">
+            {/* Month / Year navigation */}
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={goPrevMonth}
+                aria-label="Previous month"
+                className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+              >
+                <ChevronLeft size={18} className="text-foreground" />
+              </button>
+
+              <button
+                onClick={() => setShowYearPicker(p => !p)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-muted transition-colors"
+              >
+                <span className="font-display text-sm font-bold text-foreground">{MONTH_NAMES[viewMonth]}</span>
+                <span className="font-body text-sm text-accent font-medium">{viewYear}</span>
+                <ChevronDown size={14} className={`text-muted-foreground transition-transform ${showYearPicker ? 'rotate-180' : ''}`} />
+              </button>
+
+              <button
+                onClick={goNextMonth}
+                aria-label="Next month"
+                className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+              >
+                <ChevronRight size={18} className="text-foreground" />
+              </button>
+            </div>
+
+            {showYearPicker ? (
+              <div className="grid grid-cols-4 gap-2 animate-fade-in">
+                {yearRange.map(y => (
+                  <button
+                    key={y}
+                    onClick={() => { setViewYear(y); setShowYearPicker(false); }}
+                    className={`py-2 rounded-lg font-body text-sm transition-all ${
+                      y === viewYear ? 'gold-gradient text-primary font-semibold' : 'hover:bg-muted text-foreground'
+                    }`}
+                  >
+                    {y}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                  {dayLabels.map(d => (
+                    <div key={d} className="text-center text-[10px] font-body text-muted-foreground font-medium py-1">{d}</div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
+                  {Array.from({ length: daysInMonth }, (_, i) => {
+                    const day = i + 1;
+                    const dateStr = formatDate(day);
+                    const isToday = isCurrentMonth && day === today.getDate();
+                    const hasEvent = events.some(e => e.date === dateStr);
+                    const isSelected = selectedDate === dateStr;
+
+                    return (
+                      <button
+                        key={day}
+                        onClick={() => { setSelectedDate(dateStr); setShowEventForm(true); }}
+                        className={`relative aspect-square flex items-center justify-center rounded-lg text-xs font-body transition-all ${
+                          isToday ? 'gold-gradient text-primary font-bold' :
+                          isSelected ? 'bg-accent/20 text-accent font-medium' :
+                          'text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        {day}
+                        {hasEvent && <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-accent" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        )}
 
-        {showEventForm && (
+        {showEventForm && calendarOpen && (
           <div className="mt-3 p-4 bg-card rounded-xl border border-border shadow-card animate-scale-in">
             <p className="font-body text-xs text-muted-foreground mb-3">Add event for {selectedDate}</p>
             {storage.getEventForDate(email, selectedDate) && (
@@ -261,10 +326,18 @@ export default function HomePage() {
           <h2 className="font-display text-lg font-bold text-foreground">Must-Have Essentials</h2>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-          {['Classic White Shirt', 'Tailored Blazer', 'Little Black Dress', 'Quality Denim', 'Versatile Sneakers'].map((item, i) => (
+          {ESSENTIALS.map((item, i) => (
             <div key={i} className="flex-shrink-0 w-28">
-              <div className="w-28 h-36 rounded-xl bg-gradient-to-br from-secondary to-muted flex items-center justify-center shadow-card border border-border/30">
-                <span className="font-body text-xs text-muted-foreground text-center px-2">{item}</span>
+              <div className="relative w-28 h-36 rounded-xl overflow-hidden shadow-card border border-border/30 group">
+                <img
+                  src={item.img}
+                  alt={item.name}
+                  loading="lazy"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
+                  <p className="font-body text-[10px] font-medium text-white leading-tight">{item.name}</p>
+                </div>
               </div>
             </div>
           ))}
@@ -278,11 +351,17 @@ export default function HomePage() {
           <h2 className="font-display text-lg font-bold text-foreground">Trending Looks</h2>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-          {['Quiet Luxury', 'Old Money', 'Coastal Chic', 'Minimalist', 'Power Dressing'].map((trend, i) => (
+          {TRENDS.map((trend, i) => (
             <div key={i} className="flex-shrink-0 w-32">
-              <div className="w-32 h-44 rounded-xl bg-gradient-to-br from-card to-secondary flex items-end shadow-card overflow-hidden border border-border/30">
-                <div className="w-full p-3 glass">
-                  <p className="font-body text-xs font-medium text-foreground">{trend}</p>
+              <div className="relative w-32 h-44 rounded-xl overflow-hidden shadow-card border border-border/30 group">
+                <img
+                  src={trend.img}
+                  alt={trend.name}
+                  loading="lazy"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                <div className="absolute inset-x-0 bottom-0 p-3 glass">
+                  <p className="font-body text-xs font-medium text-foreground">{trend.name}</p>
                 </div>
               </div>
             </div>
