@@ -64,10 +64,10 @@ export default function HomePage() {
     [wardrobe, weather, prefs]
   );
 
-  const today = new Date();
-  const currentMonth = today.toLocaleString('default', { month: 'long', year: 'numeric' });
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
+  const currentMonthLabel = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const isCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth();
 
   const handleAddEvent = () => {
     if (selectedDate && eventName) {
@@ -79,10 +79,21 @@ export default function HomePage() {
   };
 
   const formatDate = (day: number) => {
-    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const m = String(viewMonth + 1).padStart(2, '0');
     const d = String(day).padStart(2, '0');
-    return `${today.getFullYear()}-${m}-${d}`;
+    return `${viewYear}-${m}-${d}`;
   };
+
+  const goPrevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); }
+    else setViewMonth(viewMonth - 1);
+  };
+  const goNextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); }
+    else setViewMonth(viewMonth + 1);
+  };
+
+  const yearRange = Array.from({ length: 12 }, (_, i) => today.getFullYear() - 5 + i);
 
   const clockPositions = Array.from({ length: 7 }, (_, i) => {
     const angle = (i * 360 / 7) - 90;
