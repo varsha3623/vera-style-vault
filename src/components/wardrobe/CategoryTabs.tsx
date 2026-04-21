@@ -25,17 +25,17 @@ export default function CategoryTabs({ sections, active, counts, monogram, onSel
             key={s}
             ref={isActive ? activeRef : undefined}
             onClick={() => onSelect(s)}
-            className={`relative shrink-0 px-4 py-2.5 rounded-full font-body text-xs whitespace-nowrap transition-all duration-300 ${
+            className={`relative shrink-0 px-4 py-2 rounded-full font-body text-xs whitespace-nowrap transition-all duration-300 ${
               isActive
-                ? 'gold-gradient text-primary shadow-gold font-semibold'
-                : 'bg-card border border-border text-foreground/80 hover:border-accent/40'
+                ? 'bg-foreground text-cream font-medium'
+                : 'bg-cream border border-border/50 text-foreground/80 hover:border-taupe/40'
             }`}
           >
-            <span className={`font-display tracking-widest text-[10px] mr-2 ${isActive ? 'text-primary/70' : 'text-accent/70'}`}>
+            <span className={`font-display italic text-[11px] mr-1.5 ${isActive ? 'text-cream/70' : 'text-taupe/80'}`}>
               {monogram[s] || '00'}
             </span>
             {s}
-            <span className={`ml-2 text-[10px] ${isActive ? 'text-primary/80' : 'text-muted-foreground'}`}>
+            <span className={`ml-2 text-[10px] ${isActive ? 'text-cream/80' : 'text-muted-foreground'}`}>
               {counts[s] || 0}
             </span>
           </button>
