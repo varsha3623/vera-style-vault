@@ -30,17 +30,32 @@ export default {
         popover: { DEFAULT: "hsl(var(--popover))", foreground: "hsl(var(--popover-foreground))" },
         card: { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
         gold: {
-          DEFAULT: "hsl(var(--gold))",
-          light: "hsl(var(--gold-light))",
-          dark: "hsl(var(--gold-dark))",
+          DEFAULT: "hsl(var(--nude-deep))",
+          light: "hsl(var(--rose-blush))",
+          dark: "hsl(var(--taupe))",
         },
         burgundy: {
-          DEFAULT: "hsl(var(--burgundy))",
-          light: "hsl(var(--burgundy-light))",
+          DEFAULT: "hsl(var(--taupe))",
+          light: "hsl(var(--taupe-light))",
+        },
+        beige: {
+          DEFAULT: "hsl(var(--beige))",
+          light: "hsl(var(--beige-light))",
+          dark: "hsl(var(--beige-dark))",
         },
         champagne: "hsl(var(--champagne))",
-        nude: "hsl(var(--nude))",
+        nude: {
+          DEFAULT: "hsl(var(--nude))",
+          soft: "hsl(var(--nude-soft))",
+          deep: "hsl(var(--nude-deep))",
+        },
         cream: "hsl(var(--cream))",
+        sand: "hsl(var(--sand))",
+        rose: "hsl(var(--rose-blush))",
+        taupe: {
+          DEFAULT: "hsl(var(--taupe))",
+          light: "hsl(var(--taupe-light))",
+        },
         espresso: "hsl(var(--espresso))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
