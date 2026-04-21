@@ -1,25 +1,5 @@
-import { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import type { WeatherData } from '@/lib/weather';
 import { MapPin } from 'lucide-react';
-
-// Code-split the heavy 3D scene (three / @react-three/fiber / drei) into its own chunk.
-// It only loads after the hero mounts, keeping the initial bundle lean for mobile.
-const WeatherHero3D = lazy(() => import('./WeatherHero3D'));
-
-function HeroSceneFallback() {
-  return (
-    <div className="absolute inset-0 pointer-events-none">
-      {/* Soft animated gold glow placeholder while the 3D scene loads */}
-      <div
-        className="absolute inset-0 opacity-60 animate-pulse"
-        style={{
-          background:
-            'radial-gradient(50% 40% at 70% 25%, hsl(var(--gold)/0.45) 0%, transparent 70%)',
-        }}
-      />
-    </div>
-  );
-}
 
 type Props = {
   name: string;
@@ -30,115 +10,75 @@ type Props = {
 };
 
 /**
- * Luxury full-bleed hero featuring a 3D weather scene with pointer parallax,
- * soft burgundy radial wash, and a glassmorphism greeting card.
+ * Editorial full-bleed hero — large still-life fashion image, soft cream wash,
+ * serif headline, and a discreet weather plate. No 3D, no parallax: a calm,
+ * magazine-style first impression matching the new VÉRA identity.
  */
 export default function LuxuryHero({ name, greeting, weather, time, location }: Props) {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const [parallax, setParallax] = useState({ x: 0, y: 0 });
-
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-
-    const handlePointer = (e: PointerEvent) => {
-      const rect = el.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width - 0.5;
-      const y = (e.clientY - rect.top) / rect.height - 0.5;
-      setParallax({ x, y });
-    };
-    const handleOrient = (e: DeviceOrientationEvent) => {
-      // Map device tilt → small parallax range
-      const x = Math.max(-0.5, Math.min(0.5, (e.gamma ?? 0) / 60));
-      const y = Math.max(-0.5, Math.min(0.5, (e.beta ?? 0) / 90 - 0.3));
-      setParallax({ x, y });
-    };
-
-    el.addEventListener('pointermove', handlePointer);
-    window.addEventListener('deviceorientation', handleOrient);
-    return () => {
-      el.removeEventListener('pointermove', handlePointer);
-      window.removeEventListener('deviceorientation', handleOrient);
-    };
-  }, []);
-
   const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  // Smooth nightness ∈ [0,1] from hour-of-day. Dawn ≈ 5–7, dusk ≈ 18–20.
-  const nightness = (() => {
-    const h = time.getHours() + time.getMinutes() / 60;
-    if (h >= 7 && h <= 18) return 0;
-    if (h >= 20 || h <= 5) return 1;
-    if (h > 18 && h < 20) return (h - 18) / 2; // dusk ramp up
-    return 1 - (h - 5) / 2; // dawn ramp down
-  })();
-
-  const heroBg = nightness < 0.5
-    ? `radial-gradient(120% 100% at 30% 0%, hsl(var(--burgundy-light)/${0.35 - nightness * 0.2}) 0%, hsl(var(--burgundy)/${0.55 + nightness * 0.1}) 45%, hsl(var(--espresso)/${0.85 + nightness * 0.1}) 100%)`
-    : `radial-gradient(120% 100% at 30% 0%, hsl(240 45% 22% / 0.55) 0%, hsl(260 50% 12% / 0.85) 50%, hsl(250 60% 5% / 0.95) 100%)`;
-
   return (
-    <div
-      ref={wrapRef}
-      className="relative w-full h-72 rounded-3xl overflow-hidden shadow-luxury border border-border/40"
-      style={{ background: heroBg, transition: 'background 1.2s ease-out' }}
-    >
-      {/* 3D scene layer — lazy-loaded to keep initial bundle small */}
-      <Suspense fallback={<HeroSceneFallback />}>
-        <WeatherHero3D weather={weather} parallax={parallax} nightness={nightness} />
-      </Suspense>
+    <div className="relative w-full rounded-[2rem] overflow-hidden shadow-arch border border-border/60 bg-cream">
+      {/* Editorial image */}
+      <div className="relative h-[420px] w-full overflow-hidden">
+        <img
+          src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&q=85&auto=format&fit=crop"
+          alt="Editorial fashion still life"
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="eager"
+        />
 
-      {/* Subtle gold grain overlay (warmer by day, cooler by night) */}
-      <div
-        className="absolute inset-0 pointer-events-none mix-blend-overlay"
-        style={{
-          opacity: 0.4 - nightness * 0.15,
-          background:
-            'radial-gradient(60% 50% at 70% 20%, hsl(var(--gold)/0.35) 0%, transparent 60%)',
-          transition: 'opacity 1.2s ease-out',
-        }}
-      />
+        {/* Soft cream wash to keep type legible */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(180deg, hsl(var(--cream) / 0.55) 0%, hsl(var(--cream) / 0.15) 35%, hsl(var(--cream) / 0.0) 60%, hsl(var(--espresso) / 0.30) 100%)',
+          }}
+        />
 
-      {/* Vignette */}
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-
-      {/* Glass greeting card */}
-      <div
-        className="absolute left-4 right-4 bottom-4 rounded-2xl p-4 backdrop-blur-xl border border-white/15 animate-fade-in-up"
-        style={{
-          background: 'linear-gradient(135deg, hsl(var(--cream)/0.18) 0%, hsl(var(--cream)/0.06) 100%)',
-          boxShadow: '0 10px 40px -12px hsl(var(--espresso) / 0.6), inset 0 1px 0 hsl(var(--cream)/0.25)',
-        }}
-      >
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <p className="font-body text-[10px] uppercase tracking-[0.2em] text-cream/70">{greeting}</p>
-            <h1 className="font-display text-2xl font-semibold text-cream truncate mt-0.5">
-              {name}
-            </h1>
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <MapPin size={11} className="text-gold-light/80 flex-shrink-0" />
-              <p className="font-body text-[11px] text-cream/70 truncate">
-                {location || weather.city || 'Locating…'}
-              </p>
-            </div>
+        {/* Top monogram */}
+        <div className="absolute top-5 left-5 right-5 flex items-center justify-between">
+          <span className="font-display text-[11px] tracking-[0.45em] text-foreground/80">
+            VÉRA · ATELIER
+          </span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cream/80 backdrop-blur-md border border-border/40">
+            <MapPin size={11} className="text-taupe" />
+            <span className="font-body text-[10px] uppercase tracking-[0.18em] text-foreground/80">
+              {location || weather.city || 'Locating…'}
+            </span>
           </div>
-          <div className="text-right flex-shrink-0">
-            <p className="font-display text-3xl font-bold text-cream leading-none">
-              {weather.temp}°
-            </p>
-            <p className="font-body text-[10px] uppercase tracking-[0.18em] text-gold-light mt-1">
-              {weather.condition}
-            </p>
-            <p className="font-body text-[10px] text-cream/60 mt-0.5">{timeStr}</p>
-          </div>
+        </div>
+
+        {/* Editorial headline anchored center */}
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 px-6 text-center">
+          <p className="font-body text-[10px] uppercase tracking-[0.4em] text-foreground/65 mb-3">
+            {greeting}
+          </p>
+          <h1 className="font-display font-light text-[2.6rem] leading-[1.05] text-foreground tracking-tight">
+            {name}
+          </h1>
+          <div className="mx-auto mt-4 h-px w-12 bg-nude-deep/50" />
         </div>
       </div>
 
-      {/* Top monogram */}
-      <div className="absolute top-4 left-4 flex items-center gap-2">
-        <span className="font-display text-[10px] tracking-[0.4em] text-gold-light/90">VÉRA</span>
-        <span className="h-px w-6 bg-gold-light/40" />
+      {/* Weather + time editorial plate */}
+      <div className="relative bg-cream-gradient px-6 py-5 flex items-center justify-between border-t border-border/50">
+        <div>
+          <p className="font-body text-[9px] uppercase tracking-[0.35em] text-muted-foreground">
+            Today
+          </p>
+          <p className="font-display text-2xl font-light text-foreground mt-0.5">
+            {weather.temp}° <span className="text-muted-foreground/70 text-base italic font-normal">{weather.condition.toLowerCase()}</span>
+          </p>
+        </div>
+
+        <div className="text-right">
+          <p className="font-body text-[9px] uppercase tracking-[0.35em] text-muted-foreground">
+            Local time
+          </p>
+          <p className="font-display text-2xl font-light text-foreground mt-0.5">{timeStr}</p>
+        </div>
       </div>
     </div>
   );
