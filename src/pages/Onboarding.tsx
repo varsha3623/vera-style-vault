@@ -5,10 +5,10 @@ import { storage, type UserPreferences } from '@/lib/storage';
 import { MapPin, Briefcase, Palette, Shield, ChevronRight, ChevronLeft } from 'lucide-react';
 
 const steps = [
-  { key: 'Location', icon: MapPin, desc: 'Where are you based?' },
-  { key: 'Lifestyle', icon: Briefcase, desc: 'What describes your day?' },
-  { key: 'Style', icon: Palette, desc: 'What\'s your vibe?' },
-  { key: 'Restrictions', icon: Shield, desc: 'Any preferences?' },
+  { key: 'Location', icon: MapPin },
+  { key: 'Lifestyle', icon: Briefcase },
+  { key: 'Style', icon: Palette },
+  { key: 'Care', icon: Shield },
 ];
 
 export default function Onboarding() {
@@ -27,9 +27,7 @@ export default function Onboarding() {
 
   const finish = () => {
     const prefs: UserPreferences = {
-      location,
-      lifestyle,
-      style,
+      location, lifestyle, style,
       restrictions: { sleevelessAllowed, shortOutfitsAllowed: shortAllowed },
     };
     storage.setPreferences(email, prefs);
@@ -38,108 +36,103 @@ export default function Onboarding() {
   };
 
   const lifestyleOptions = [
-    { value: 'student' as const, label: 'Student', emoji: '📚', desc: 'Campus & social life' },
-    { value: 'corporate' as const, label: 'Corporate', emoji: '💼', desc: 'Office & professional' },
-    { value: 'other' as const, label: 'Other', emoji: '✨', desc: 'Freelance, creative & more' },
+    { value: 'student' as const, label: 'Student', desc: 'Campus & social' },
+    { value: 'corporate' as const, label: 'Corporate', desc: 'Office & professional' },
+    { value: 'other' as const, label: 'Other', desc: 'Freelance, creative & more' },
   ];
 
   const styleOptions = [
-    { value: 'casual' as const, label: 'Casual', emoji: '👟', desc: 'Relaxed & comfortable' },
-    { value: 'elegant' as const, label: 'Elegant', emoji: '🥂', desc: 'Refined & sophisticated' },
-    { value: 'trendy' as const, label: 'Trendy', emoji: '🔥', desc: 'Fashion-forward looks' },
-    { value: 'minimal' as const, label: 'Minimal', emoji: '🤍', desc: 'Clean & simple' },
+    { value: 'casual' as const, label: 'Casual', desc: 'Relaxed' },
+    { value: 'elegant' as const, label: 'Elegant', desc: 'Refined' },
+    { value: 'trendy' as const, label: 'Trendy', desc: 'Forward' },
+    { value: 'minimal' as const, label: 'Minimal', desc: 'Pared back' },
   ];
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-display font-bold text-gold-gradient">Style Assessment</h1>
-          <p className="text-muted-foreground mt-2 font-body text-sm">Help VÉRA understand your style</p>
+          <p className="font-body text-[10px] uppercase tracking-[0.4em] text-taupe mb-2">A few questions</p>
+          <h1 className="font-display text-3xl font-light italic text-foreground">Style assessment</h1>
+          <p className="font-body text-xs text-muted-foreground mt-2 italic">Help VÉRA understand your taste</p>
         </div>
 
-        {/* Progress */}
-        <div className="flex gap-2 mb-8">
+        {/* Progress dots */}
+        <div className="flex justify-center gap-2 mb-9">
           {steps.map((s, i) => (
-            <div key={s.key} className="flex-1">
-              <div className={`h-1.5 rounded-full transition-all duration-500 ${i <= step ? 'gold-gradient' : 'bg-muted'}`} />
-              <div className="flex items-center justify-center gap-1 mt-2">
-                <s.icon size={10} className={i <= step ? 'text-accent' : 'text-muted-foreground'} />
-                <p className={`text-[10px] font-body ${i <= step ? 'text-accent font-medium' : 'text-muted-foreground'}`}>{s.key}</p>
-              </div>
-            </div>
+            <div key={s.key} className={`h-1.5 rounded-full transition-all duration-500 ${
+              i === step ? 'w-8 bg-foreground' : i < step ? 'w-4 bg-nude-deep' : 'w-4 bg-border'
+            }`} />
           ))}
         </div>
 
-        <div className="min-h-[280px]">
+        <div className="bg-cream rounded-3xl p-7 border border-border/40 shadow-card min-h-[320px]">
           {step === 0 && (
-            <div className="space-y-4 animate-fade-in">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-2xl gold-gradient flex items-center justify-center mx-auto mb-3">
-                  <MapPin size={24} className="text-primary" />
+            <div className="space-y-5 animate-fade-in">
+              <div className="text-center">
+                <div className="w-14 h-14 rounded-full nude-gradient flex items-center justify-center mx-auto mb-3 shadow-soft">
+                  <MapPin size={20} className="text-foreground/70" strokeWidth={1.5} />
                 </div>
-                <h2 className="font-display text-lg font-bold text-foreground">Your Location</h2>
-                <p className="font-body text-xs text-muted-foreground mt-1">We'll use this for weather-based styling</p>
+                <h2 className="font-display text-xl italic text-foreground">Where are you?</h2>
+                <p className="font-body text-[11px] text-muted-foreground mt-1.5">For weather-aware looks</p>
               </div>
               <input
                 value={location}
                 onChange={e => setLocation(e.target.value)}
-                placeholder="e.g., New York, London, Mumbai"
-                className="w-full bg-card border border-border rounded-xl px-4 py-3.5 text-foreground font-body text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
+                placeholder="New York, London, Mumbai…"
+                className="w-full bg-background border border-border rounded-full px-5 py-3 text-foreground font-body text-sm focus:outline-none focus:ring-1 focus:ring-taupe/40 transition-all"
               />
             </div>
           )}
 
           {step === 1 && (
             <div className="space-y-3 animate-fade-in">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-2xl gold-gradient flex items-center justify-center mx-auto mb-3">
-                  <Briefcase size={24} className="text-primary" />
+              <div className="text-center mb-4">
+                <div className="w-14 h-14 rounded-full nude-gradient flex items-center justify-center mx-auto mb-3 shadow-soft">
+                  <Briefcase size={20} className="text-foreground/70" strokeWidth={1.5} />
                 </div>
-                <h2 className="font-display text-lg font-bold text-foreground">Your Lifestyle</h2>
+                <h2 className="font-display text-xl italic text-foreground">Your lifestyle</h2>
               </div>
               {lifestyleOptions.map(l => (
                 <button
                   key={l.value}
                   onClick={() => setLifestyle(l.value)}
-                  className={`w-full flex items-center gap-4 py-3.5 px-5 rounded-xl border font-body text-sm transition-all ${
+                  className={`w-full flex items-center justify-between py-3.5 px-5 rounded-full border font-body text-sm transition-all ${
                     lifestyle === l.value
-                      ? 'border-accent bg-accent/10 shadow-card'
-                      : 'border-border bg-card hover:border-accent/40'
+                      ? 'border-foreground bg-foreground text-cream'
+                      : 'border-border bg-background text-foreground hover:border-taupe/40'
                   }`}
                 >
-                  <span className="text-2xl">{l.emoji}</span>
-                  <div className="text-left">
-                    <p className={`font-medium ${lifestyle === l.value ? 'text-accent' : 'text-foreground'}`}>{l.label}</p>
-                    <p className="text-xs text-muted-foreground">{l.desc}</p>
-                  </div>
+                  <span className="font-display italic text-base">{l.label}</span>
+                  <span className={`text-[10px] uppercase tracking-[0.2em] ${lifestyle === l.value ? 'text-cream/70' : 'text-muted-foreground'}`}>
+                    {l.desc}
+                  </span>
                 </button>
               ))}
             </div>
           )}
 
           {step === 2 && (
-            <div className="space-y-3 animate-fade-in">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-2xl gold-gradient flex items-center justify-center mx-auto mb-3">
-                  <Palette size={24} className="text-primary" />
+            <div className="animate-fade-in">
+              <div className="text-center mb-4">
+                <div className="w-14 h-14 rounded-full nude-gradient flex items-center justify-center mx-auto mb-3 shadow-soft">
+                  <Palette size={20} className="text-foreground/70" strokeWidth={1.5} />
                 </div>
-                <h2 className="font-display text-lg font-bold text-foreground">Your Style</h2>
+                <h2 className="font-display text-xl italic text-foreground">Your style</h2>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {styleOptions.map(s => (
                   <button
                     key={s.value}
                     onClick={() => setStyle(s.value)}
-                    className={`flex flex-col items-center gap-2 py-5 px-4 rounded-xl border font-body text-sm transition-all ${
+                    className={`flex flex-col items-center gap-1 py-5 px-4 rounded-2xl border font-body transition-all ${
                       style === s.value
-                        ? 'border-accent bg-accent/10 shadow-card'
-                        : 'border-border bg-card hover:border-accent/40'
+                        ? 'border-foreground bg-foreground text-cream'
+                        : 'border-border bg-background text-foreground hover:border-taupe/40'
                     }`}
                   >
-                    <span className="text-3xl">{s.emoji}</span>
-                    <p className={`font-medium ${style === s.value ? 'text-accent' : 'text-foreground'}`}>{s.label}</p>
-                    <p className="text-[10px] text-muted-foreground">{s.desc}</p>
+                    <p className="font-display italic text-lg">{s.label}</p>
+                    <p className={`text-[10px] uppercase tracking-[0.2em] ${style === s.value ? 'text-cream/70' : 'text-muted-foreground'}`}>{s.desc}</p>
                   </button>
                 ))}
               </div>
@@ -147,25 +140,26 @@ export default function Onboarding() {
           )}
 
           {step === 3 && (
-            <div className="space-y-4 animate-fade-in">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-2xl gold-gradient flex items-center justify-center mx-auto mb-3">
-                  <Shield size={24} className="text-primary" />
+            <div className="space-y-3 animate-fade-in">
+              <div className="text-center mb-4">
+                <div className="w-14 h-14 rounded-full nude-gradient flex items-center justify-center mx-auto mb-3 shadow-soft">
+                  <Shield size={20} className="text-foreground/70" strokeWidth={1.5} />
                 </div>
-                <h2 className="font-display text-lg font-bold text-foreground">Preferences</h2>
-                <p className="font-body text-xs text-muted-foreground mt-1">We'll respect these in recommendations</p>
+                <h2 className="font-display text-xl italic text-foreground">Care notes</h2>
+                <p className="font-body text-[11px] text-muted-foreground mt-1.5">We'll respect these in suggestions</p>
               </div>
               {[
                 { label: 'Sleeveless outfits', value: sleevelessAllowed, onChange: setSleevelessAllowed },
                 { label: 'Short outfits', value: shortAllowed, onChange: setShortAllowed },
               ].map(toggle => (
-                <div key={toggle.label} className="flex items-center justify-between py-4 px-5 rounded-xl border border-border bg-card">
+                <div key={toggle.label} className="flex items-center justify-between py-4 px-5 rounded-full border border-border bg-background">
                   <span className="font-body text-sm text-foreground">{toggle.label}</span>
                   <button
                     onClick={() => toggle.onChange(!toggle.value)}
-                    className={`w-12 h-7 rounded-full transition-all relative ${toggle.value ? 'bg-accent' : 'bg-muted'}`}
+                    className={`w-12 h-7 rounded-full transition-all relative ${toggle.value ? 'bg-foreground' : 'bg-muted'}`}
+                    aria-pressed={toggle.value}
                   >
-                    <span className={`absolute top-1 w-5 h-5 rounded-full bg-background shadow-sm transition-transform ${toggle.value ? 'left-6' : 'left-1'}`} />
+                    <span className={`absolute top-1 w-5 h-5 rounded-full bg-cream shadow-sm transition-all duration-300 ${toggle.value ? 'left-6' : 'left-1'}`} />
                   </button>
                 </div>
               ))}
@@ -173,20 +167,20 @@ export default function Onboarding() {
           )}
         </div>
 
-        <div className="flex gap-3 mt-8">
+        <div className="flex gap-3 mt-7">
           {step > 0 && (
-            <button onClick={back} className="flex items-center justify-center gap-1 flex-1 border border-border py-3 rounded-xl font-body text-sm text-muted-foreground hover:bg-card transition-colors">
-              <ChevronLeft size={16} />
+            <button onClick={back} className="flex items-center justify-center gap-1 flex-1 border border-border py-3 rounded-full font-body text-xs text-muted-foreground hover:bg-cream transition-colors uppercase tracking-[0.25em]">
+              <ChevronLeft size={14} />
               Back
             </button>
           )}
           <button
             onClick={next}
             disabled={step === 0 && !location}
-            className="flex items-center justify-center gap-1 flex-1 gold-gradient text-primary font-body font-semibold py-3 rounded-xl tracking-wide uppercase text-sm hover:opacity-90 transition-opacity disabled:opacity-50 shadow-luxury"
+            className="flex items-center justify-center gap-1 flex-1 bg-foreground text-cream font-body py-3 rounded-full uppercase tracking-[0.3em] text-xs hover:bg-taupe transition-colors disabled:opacity-50"
           >
             {step === 3 ? 'Complete' : 'Continue'}
-            {step < 3 && <ChevronRight size={16} />}
+            {step < 3 && <ChevronRight size={14} />}
           </button>
         </div>
       </div>

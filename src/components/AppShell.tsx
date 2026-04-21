@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Home, ShirtIcon, Sparkles, MessageCircle, Menu, Heart, X, User, Settings, Mail, Star, LogOut } from 'lucide-react';
 
-// Tabs that participate in horizontal swipe navigation, in order.
 const SWIPE_ROUTES = ['/', '/wardrobe', '/outfits', '/chat'];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -12,7 +11,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  // Touch swipe state — only horizontal gestures with low vertical drift navigate.
   const touchStart = useRef<{ x: number; y: number; t: number } | null>(null);
 
   const onTouchStart = (e: React.TouchEvent) => {
@@ -30,7 +28,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const elapsed = Date.now() - start.t;
     if (elapsed > 600) return;
     if (Math.abs(dx) < 70) return;
-    if (Math.abs(dy) > Math.abs(dx) * 0.6) return; // ignore mostly-vertical swipes
+    if (Math.abs(dy) > Math.abs(dx) * 0.6) return;
     const idx = SWIPE_ROUTES.indexOf(location.pathname);
     if (idx === -1) return;
     const nextIdx = dx < 0 ? idx + 1 : idx - 1;
@@ -54,59 +52,73 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      {/* Top Bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
-        <div className="flex items-center justify-between px-4 h-14">
-          <button onClick={() => setSideMenuOpen(true)} className="p-2 text-foreground hover:text-accent transition-colors">
-            <Menu size={20} />
+      {/* Top Bar — soft cream, serif wordmark */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-cream/85 backdrop-blur-xl border-b border-border/40">
+        <div className="flex items-center justify-between px-5 h-14">
+          <button
+            onClick={() => setSideMenuOpen(true)}
+            aria-label="Open menu"
+            className="p-2 text-foreground/80 hover:text-foreground transition-colors"
+          >
+            <Menu size={20} strokeWidth={1.5} />
           </button>
-          <Link to="/" className="text-xl font-display font-bold tracking-widest text-gold-gradient">VÉRA</Link>
-          <Link to="/wishlist" className="p-2 text-foreground hover:text-accent transition-colors">
-            <Heart size={20} />
+          <Link to="/" className="font-display text-2xl font-medium italic tracking-wide text-foreground">
+            Véra
+          </Link>
+          <Link
+            to="/wishlist"
+            aria-label="Wishlist"
+            className="p-2 text-foreground/80 hover:text-foreground transition-colors"
+          >
+            <Heart size={18} strokeWidth={1.5} />
           </Link>
         </div>
       </header>
 
-      {/* Side Menu Overlay */}
+      {/* Side menu */}
       {sideMenuOpen && (
         <div className="fixed inset-0 z-[60]">
-          <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setSideMenuOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-72 bg-background border-r border-border shadow-luxury animate-slide-in-left">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-lg font-display font-bold text-gold-gradient">VÉRA</h2>
-                <button onClick={() => setSideMenuOpen(false)} className="text-muted-foreground hover:text-foreground">
-                  <X size={20} />
+          <div className="absolute inset-0 bg-foreground/15 backdrop-blur-sm" onClick={() => setSideMenuOpen(false)} />
+          <div className="absolute left-0 top-0 bottom-0 w-72 bg-cream border-r border-border/40 shadow-arch animate-slide-in-left">
+            <div className="p-7">
+              <div className="flex items-center justify-between mb-9">
+                <h2 className="font-display text-2xl font-medium italic text-foreground">Véra</h2>
+                <button
+                  onClick={() => setSideMenuOpen(false)}
+                  aria-label="Close menu"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X size={18} strokeWidth={1.5} />
                 </button>
               </div>
 
               {user && (
-                <div className="mb-8 pb-6 border-b border-border">
-                  <div className="w-14 h-14 rounded-full gold-gradient flex items-center justify-center mb-3">
-                    <span className="text-primary font-display font-bold text-lg">{user.name.charAt(0)}</span>
+                <div className="mb-8 pb-6 border-b border-border/50">
+                  <div className="w-14 h-14 rounded-full nude-gradient flex items-center justify-center mb-3 shadow-soft">
+                    <span className="font-display font-medium italic text-xl text-foreground">{user.name.charAt(0)}</span>
                   </div>
-                  <p className="font-body font-medium text-foreground">{user.name}</p>
-                  <p className="font-body text-xs text-muted-foreground">{user.email}</p>
+                  <p className="font-display text-base italic text-foreground">{user.name}</p>
+                  <p className="font-body text-[11px] text-muted-foreground tracking-wide">{user.email}</p>
                 </div>
               )}
 
-              <nav className="space-y-1">
+              <nav className="space-y-0.5">
                 {menuItems.map(item => (
                   <Link
                     key={item.label}
                     to={item.path}
                     onClick={() => setSideMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-body text-foreground hover:bg-card hover:text-accent transition-colors"
+                    className="flex items-center gap-3 px-3 py-3 rounded-full text-sm font-body text-foreground/85 hover:bg-nude-soft hover:text-foreground transition-colors"
                   >
-                    <item.icon size={18} />
+                    <item.icon size={16} strokeWidth={1.5} />
                     {item.label}
                   </Link>
                 ))}
                 <button
                   onClick={() => { logout(); setSideMenuOpen(false); }}
-                  className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-body text-destructive hover:bg-destructive/10 transition-colors w-full"
+                  className="flex items-center gap-3 px-3 py-3 rounded-full text-sm font-body text-destructive hover:bg-destructive/10 transition-colors w-full"
                 >
-                  <LogOut size={18} />
+                  <LogOut size={16} strokeWidth={1.5} />
                   Logout
                 </button>
               </nav>
@@ -115,13 +127,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* Main Content */}
+      {/* Main */}
       <main className="flex-1 pt-14 pb-20">
         {children}
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/50">
+      {/* Bottom nav — soft pill */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-cream/90 backdrop-blur-xl border-t border-border/40">
         <div className="flex items-center justify-around h-16 max-w-md mx-auto">
           {navItems.map(item => {
             const active = location.pathname === item.path;
@@ -130,11 +142,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 key={item.path}
                 to={item.path}
                 className={`flex flex-col items-center gap-1 px-4 py-1 transition-colors ${
-                  active ? 'text-accent' : 'text-muted-foreground hover:text-foreground'
+                  active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/80'
                 }`}
               >
-                <item.icon size={20} strokeWidth={active ? 2.5 : 1.5} />
-                <span className="text-[10px] font-body font-medium tracking-wide">{item.label}</span>
+                <item.icon size={19} strokeWidth={active ? 1.8 : 1.4} />
+                <span className={`text-[10px] font-body tracking-wide ${active ? 'italic font-medium' : ''}`}>
+                  {item.label}
+                </span>
               </Link>
             );
           })}

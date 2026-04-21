@@ -93,53 +93,44 @@ export default function OutfitsPage() {
   if (wardrobe.length === 0) {
     return (
       <div className="px-4 py-12 max-w-lg mx-auto text-center animate-fade-in">
-        <div className="w-20 h-20 rounded-full glass-bubble mx-auto flex items-center justify-center mb-4 shadow-gold">
-          <span className="font-display text-2xl text-gold-gradient">01</span>
+        <div className="w-20 h-20 rounded-full nude-gradient mx-auto flex items-center justify-center mb-5 shadow-soft">
+          <span className="font-display text-2xl italic text-foreground">01</span>
         </div>
-        <h2 className="font-display text-xl font-semibold text-foreground mb-2">Your atelier is empty</h2>
-        <p className="font-body text-sm text-muted-foreground">Add pieces to your wardrobe to receive curated looks.</p>
+        <h2 className="font-display text-2xl italic font-light text-foreground mb-2">Your atelier is empty</h2>
+        <p className="font-body text-sm text-muted-foreground italic">Add pieces to your wardrobe to receive curated looks.</p>
       </div>
     );
   }
 
-  const remaining = outfits.length - activeIndex;
   const allDone = activeIndex >= outfits.length;
 
   return (
-    <div className="relative px-4 py-6 max-w-lg mx-auto">
-      {/* Ambient glow */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute top-10 -right-20 w-72 h-72 rounded-full bg-accent/8 blur-3xl" />
-        <div className="absolute bottom-0 -left-20 w-72 h-72 rounded-full bg-burgundy/10 blur-3xl" />
-      </div>
-
-      {/* Header */}
-      <div className="relative flex items-end justify-between mb-2">
-        <div>
-          <p className="font-body text-[11px] tracking-[0.2em] text-accent uppercase mb-1">Curated · Today</p>
-          <h1 className="font-display text-3xl font-semibold text-foreground tracking-tight">Looks</h1>
-        </div>
+    <div className="relative px-4 py-6 max-w-lg mx-auto pb-10">
+      {/* Editorial header */}
+      <div className="text-center mb-6">
+        <p className="font-body text-[10px] uppercase tracking-[0.4em] text-taupe mb-2">Curated for today</p>
+        <h1 className="font-display text-3xl font-light italic text-foreground">Today's looks</h1>
         <button
           onClick={reset}
           aria-label="Refresh outfits"
-          className="w-10 h-10 rounded-full glass-bubble flex items-center justify-center hover:border-accent/40 transition-colors"
+          className="mx-auto mt-3 inline-flex items-center gap-1.5 text-xs font-body text-taupe hover:text-foreground transition-colors uppercase tracking-[0.25em]"
         >
-          <RefreshCw size={16} className="text-foreground" />
+          <RefreshCw size={12} strokeWidth={1.5} />
+          Refresh
         </button>
       </div>
-      <div className="relative h-px gold-hairline mb-6" />
 
       {/* Counter */}
-      <div className="relative flex items-center justify-between mb-4 px-1">
-        <span className="font-body text-xs text-muted-foreground tracking-wider">
-          {allDone ? 'Atelier complete' : `${activeIndex + 1} / ${outfits.length}`}
+      <div className="flex items-center justify-between mb-5 px-1">
+        <span className="font-body text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+          {allDone ? 'Atelier complete' : `${activeIndex + 1} of ${outfits.length}`}
         </span>
         <div className="flex gap-1">
           {outfits.map((_, i) => (
             <span
               key={i}
               className={`h-0.5 rounded-full transition-all ${
-                i < activeIndex ? 'w-2 bg-accent/60' : i === activeIndex ? 'w-6 bg-accent' : 'w-2 bg-border'
+                i < activeIndex ? 'w-2 bg-nude-deep/60' : i === activeIndex ? 'w-6 bg-foreground' : 'w-2 bg-border'
               }`}
             />
           ))}
@@ -147,17 +138,17 @@ export default function OutfitsPage() {
       </div>
 
       {/* Card stack */}
-      <div className="relative h-[460px] perspective-[1200px]">
+      <div className="relative h-[460px]">
         {allDone ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center glass-bubble rounded-3xl animate-fade-in">
-            <div className="w-14 h-14 rounded-full gold-gradient flex items-center justify-center mb-4 shadow-gold">
-              <Check size={22} className="text-primary" strokeWidth={2.4} />
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center bg-cream rounded-3xl border border-border/40 shadow-card animate-fade-in">
+            <div className="w-14 h-14 rounded-full nude-gradient flex items-center justify-center mb-4 shadow-soft">
+              <Check size={20} className="text-foreground" strokeWidth={1.8} />
             </div>
-            <h3 className="font-display text-xl text-foreground mb-1">All looks reviewed</h3>
-            <p className="font-body text-sm text-muted-foreground mb-5">Saved {savedIds.size} · Liked {likedIds.size}</p>
+            <h3 className="font-display text-2xl italic font-light text-foreground mb-1">All looks reviewed</h3>
+            <p className="font-body text-xs text-muted-foreground mb-5 uppercase tracking-[0.2em]">Saved {savedIds.size} · Liked {likedIds.size}</p>
             <button
               onClick={reset}
-              className="px-5 py-2.5 rounded-full gold-gradient text-primary font-body text-sm font-semibold shadow-gold hover:scale-105 active:scale-95 transition-transform"
+              className="px-6 py-2.5 rounded-full bg-foreground text-cream font-body text-xs uppercase tracking-[0.3em] hover:bg-taupe transition-colors"
             >
               Curate again
             </button>
@@ -166,7 +157,7 @@ export default function OutfitsPage() {
           outfits.slice(activeIndex, activeIndex + 3).map((outfit, stackIdx) => {
             const realIdx = activeIndex + stackIdx;
             const isTop = stackIdx === 0;
-            const rotate = isTop ? drag.x * 0.06 : 0;
+            const rotate = isTop ? drag.x * 0.05 : 0;
             const exitX = exitDir === 'right' ? 600 : exitDir === 'left' ? -600 : 0;
             const exitY = exitDir === 'up' ? -700 : 0;
             const tx = isTop ? (exitDir ? exitX : drag.x) : 0;
@@ -208,37 +199,37 @@ export default function OutfitsPage() {
 
       {/* Action bar */}
       {!allDone && (
-        <div className="relative mt-6 flex items-center justify-center gap-4">
+        <div className="mt-7 flex items-center justify-center gap-5">
           <button
             onClick={() => advance('left')}
             aria-label="Skip"
-            className="w-12 h-12 rounded-full glass-bubble flex items-center justify-center hover:border-destructive/40 transition-colors active:scale-95"
+            className="w-12 h-12 rounded-full bg-cream border border-border/50 flex items-center justify-center hover:border-destructive/40 transition-colors active:scale-95 shadow-soft"
           >
-            <span className="font-display text-xl text-muted-foreground">×</span>
+            <span className="font-display text-2xl text-muted-foreground italic">×</span>
           </button>
           <button
             onClick={() => { handleLike(activeIndex); advance('up'); }}
             aria-label="Wear today"
-            className="w-14 h-14 rounded-full burgundy-gradient flex items-center justify-center shadow-luxury hover:scale-105 active:scale-95 transition-transform"
+            className="w-14 h-14 rounded-full bg-foreground flex items-center justify-center shadow-arch hover:bg-taupe active:scale-95 transition-all"
           >
             <Heart
-              size={20}
-              className={likedIds.has(activeIndex) ? 'text-accent fill-accent' : 'text-accent'}
-              strokeWidth={2}
+              size={18}
+              className={likedIds.has(activeIndex) ? 'text-cream fill-cream' : 'text-cream'}
+              strokeWidth={1.8}
             />
           </button>
           <button
             onClick={() => { handleSave(outfits[activeIndex], activeIndex); advance('right'); }}
             aria-label="Save look"
-            className="w-12 h-12 rounded-full gold-gradient flex items-center justify-center shadow-gold hover:scale-105 active:scale-95 transition-transform"
+            className="w-12 h-12 rounded-full nude-gradient flex items-center justify-center shadow-soft hover:scale-105 active:scale-95 transition-transform"
           >
-            <Bookmark size={18} className="text-primary" strokeWidth={2.2} />
+            <Bookmark size={16} className="text-foreground" strokeWidth={1.8} />
           </button>
         </div>
       )}
 
       {!allDone && (
-        <p className="relative text-center mt-3 font-body text-[11px] text-muted-foreground/80 tracking-wider">
+        <p className="text-center mt-3 font-body text-[10px] text-muted-foreground/80 uppercase tracking-[0.25em] italic">
           Swipe right to save · up to wear · left to skip
         </p>
       )}
@@ -247,12 +238,7 @@ export default function OutfitsPage() {
 }
 
 function OutfitCard({
-  items,
-  saved,
-  liked,
-  showSaveOverlay,
-  showSkipOverlay,
-  showLikeOverlay,
+  items, saved, liked, showSaveOverlay, showSkipOverlay, showLikeOverlay,
 }: {
   items: WardrobeItem[];
   saved: boolean;
@@ -262,15 +248,9 @@ function OutfitCard({
   showLikeOverlay: boolean;
 }) {
   return (
-    <div className="relative w-full h-full rounded-3xl overflow-hidden glass-bubble shadow-luxury select-none">
-      {/* Decorative gold corner */}
-      <div className="absolute top-0 right-0 w-24 h-24 pointer-events-none">
-        <div className="absolute top-3 right-3 w-12 h-px bg-accent/50" />
-        <div className="absolute top-3 right-3 h-12 w-px bg-accent/50" />
-      </div>
-
+    <div className="relative w-full h-full rounded-3xl overflow-hidden bg-cream border border-border/40 shadow-arch select-none">
       {/* Item stage */}
-      <div className="relative h-[72%] flex items-center justify-center bg-gradient-to-br from-secondary/40 via-cream/30 to-nude/40" style={{ perspective: '700px' }}>
+      <div className="relative h-[72%] flex items-center justify-center bg-gradient-to-br from-nude-soft via-cream to-sand/40" style={{ perspective: '700px' }}>
         {items.map((item, j) => (
           <div
             key={item.id}
@@ -285,14 +265,14 @@ function OutfitCard({
                 src={item.image}
                 alt={item.type}
                 draggable={false}
-                className="w-28 h-36 object-cover rounded-2xl shadow-shelf border border-gold/20"
+                className="w-28 h-36 object-cover rounded-2xl shadow-soft border border-border/50"
               />
             ) : (
-              <div className="w-28 h-36 rounded-2xl glass-bubble flex flex-col items-center justify-center">
-                <span className="font-display text-xs text-gold-gradient tracking-wider">
+              <div className="w-28 h-36 rounded-2xl bg-nude-soft border border-border/50 flex flex-col items-center justify-center">
+                <span className="font-display text-base italic text-foreground">
                   {String(j + 1).padStart(2, '0')}
                 </span>
-                <span className="font-body text-[10px] text-muted-foreground uppercase tracking-wider mt-1">
+                <span className="font-body text-[10px] text-muted-foreground uppercase tracking-[0.2em] mt-1">
                   {item.type}
                 </span>
               </div>
@@ -302,33 +282,33 @@ function OutfitCard({
 
         {/* Swipe overlays */}
         {showSaveOverlay && (
-          <div className="absolute top-6 left-6 px-3 py-1.5 rounded-full gold-gradient text-primary font-body text-xs font-bold tracking-wider rotate-[-12deg] shadow-gold">
-            SAVE
+          <div className="absolute top-6 left-6 px-4 py-1.5 rounded-full nude-gradient text-foreground font-body text-[10px] uppercase tracking-[0.3em] rotate-[-12deg] shadow-soft">
+            Save
           </div>
         )}
         {showSkipOverlay && (
-          <div className="absolute top-6 right-6 px-3 py-1.5 rounded-full bg-foreground/80 text-background font-body text-xs font-bold tracking-wider rotate-[12deg]">
-            SKIP
+          <div className="absolute top-6 right-6 px-4 py-1.5 rounded-full bg-foreground text-cream font-body text-[10px] uppercase tracking-[0.3em] rotate-[12deg]">
+            Skip
           </div>
         )}
         {showLikeOverlay && (
-          <div className="absolute top-6 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full burgundy-gradient text-accent font-body text-xs font-bold tracking-wider shadow-luxury">
-            WEAR
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-foreground text-cream font-body text-[10px] uppercase tracking-[0.3em] shadow-soft">
+            Wear
           </div>
         )}
       </div>
 
-      {/* Card footer */}
-      <div className="relative h-[28%] px-5 py-4 flex flex-col justify-between bg-card/60 backdrop-blur-xl border-t border-gold/15">
+      {/* Footer */}
+      <div className="relative h-[28%] px-5 py-4 flex flex-col justify-between bg-cream border-t border-border/40">
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="font-body text-[10px] tracking-[0.25em] text-accent uppercase">Curated Look</p>
-            <div className="flex gap-1">
-              {saved && <span className="font-body text-[9px] text-accent tracking-wider uppercase">Saved</span>}
-              {liked && <Heart size={11} className="text-accent fill-accent" />}
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="font-body text-[10px] tracking-[0.3em] text-taupe uppercase">Curated look</p>
+            <div className="flex gap-1.5">
+              {saved && <span className="font-body text-[9px] text-taupe tracking-[0.25em] uppercase italic">Saved</span>}
+              {liked && <Heart size={11} className="text-foreground fill-foreground" />}
             </div>
           </div>
-          <h3 className="font-display text-lg text-foreground leading-tight">
+          <h3 className="font-display text-lg italic font-light text-foreground leading-tight">
             {items.map(i => i.type).join(' · ')}
           </h3>
         </div>
@@ -336,7 +316,7 @@ function OutfitCard({
           {items.slice(0, 4).map(item => (
             <span
               key={item.id}
-              className="font-body text-[10px] px-2 py-0.5 rounded-full bg-background/60 text-muted-foreground tracking-wider uppercase border border-border/40"
+              className="font-body text-[10px] px-2.5 py-0.5 rounded-full bg-nude-soft text-foreground/70 tracking-wider uppercase border border-border/40"
             >
               {item.color || item.type}
             </span>

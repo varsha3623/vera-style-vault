@@ -9,8 +9,7 @@ interface Props {
 }
 
 /**
- * Luxury 3D shelf carousel — horizontal stack with perspective tilt.
- * Cards rotate in 3D based on distance from center, evoking a rotating shelf.
+ * Editorial 3D shelf — soft beige base, arched cards, gentle perspective.
  */
 export default function ShelfCarousel({ items, onSelect, onUpload }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -43,14 +42,14 @@ export default function ShelfCarousel({ items, onSelect, onUpload }: Props) {
 
   if (items.length === 0) {
     return (
-      <div className="text-center py-16">
-        <div className="mx-auto mb-5 w-20 h-20 rounded-full border border-accent/40 flex items-center justify-center bg-card shadow-shelf">
-          <Upload size={24} className="text-accent" />
+      <div className="text-center py-14">
+        <div className="mx-auto mb-5 w-20 h-20 rounded-full bg-nude-soft border border-border/50 flex items-center justify-center shadow-soft">
+          <Upload size={22} className="text-taupe" strokeWidth={1.5} />
         </div>
-        <h3 className="font-display text-lg font-bold text-foreground mb-1">Empty Shelf</h3>
-        <p className="font-body text-sm text-muted-foreground mb-6">Add your first piece to begin curating</p>
-        <button onClick={onUpload} className="px-6 py-3 rounded-xl gold-gradient text-primary font-body font-semibold text-sm shadow-luxury">
-          <Upload size={14} className="inline mr-2" />Upload Item
+        <h3 className="font-display text-xl italic font-light text-foreground mb-1">Empty shelf</h3>
+        <p className="font-body text-sm text-muted-foreground italic mb-6">Add your first piece to begin</p>
+        <button onClick={onUpload} className="px-6 py-2.5 rounded-full bg-foreground text-cream font-body text-xs uppercase tracking-[0.3em] hover:bg-taupe transition-colors">
+          <Upload size={12} className="inline mr-2" strokeWidth={1.5} />Upload item
         </button>
       </div>
     );
@@ -58,9 +57,9 @@ export default function ShelfCarousel({ items, onSelect, onUpload }: Props) {
 
   return (
     <div className="relative" style={{ perspective: '1400px' }}>
-      {/* Wood-grain shelf base */}
-      <div className="absolute left-0 right-0 bottom-2 h-3 rounded-full bg-gradient-to-b from-[hsl(var(--gold-dark)/0.4)] via-[hsl(var(--burgundy)/0.6)] to-[hsl(var(--espresso))] shadow-luxury" />
-      <div className="absolute left-4 right-4 -bottom-1 h-2 rounded-full bg-foreground/20 blur-md" />
+      {/* Soft beige shelf base */}
+      <div className="absolute left-0 right-0 bottom-2 h-2.5 rounded-full bg-gradient-to-b from-nude/60 via-beige to-beige-dark/70 shadow-soft" />
+      <div className="absolute left-4 right-4 -bottom-1 h-2 rounded-full bg-foreground/10 blur-md" />
 
       <div
         ref={trackRef}
@@ -89,25 +88,17 @@ export default function ShelfCarousel({ items, onSelect, onUpload }: Props) {
                 opacity,
               }}
             >
-              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-card shadow-luxury border border-border/60">
+              {/* Arched card silhouette */}
+              <div className="relative aspect-[3/4] arch-full overflow-hidden bg-nude-soft shadow-arch border border-border/50">
                 <img src={item.image} alt={item.name || item.type} className="w-full h-full object-cover" />
-                {/* Gold hairline frame */}
-                <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-[hsl(var(--gold)/0.25)] pointer-events-none" />
-                {/* Bottom info plate */}
-                <div className="absolute bottom-0 left-0 right-0 p-3 glass">
-                  <p className="font-body text-xs text-foreground truncate">{item.name || item.type}</p>
+                <div className="absolute inset-0 arch-full ring-1 ring-inset ring-nude-deep/20 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-cream/95 to-transparent">
+                  <p className="font-display italic text-sm text-foreground truncate">{item.name || item.type}</p>
                   <div className="flex items-center justify-between mt-0.5">
                     <p className="font-body text-[10px] text-muted-foreground capitalize">{item.color}</p>
-                    <p className="font-body text-[10px] text-accent">{item.wornCount}×</p>
+                    <p className="font-body text-[10px] text-taupe">{item.wornCount}×</p>
                   </div>
                 </div>
-                {/* Specular highlight */}
-                <div
-                  className="absolute inset-0 pointer-events-none opacity-40"
-                  style={{
-                    background: `linear-gradient(${110 + rotateY}deg, transparent 40%, hsl(var(--gold) / 0.22) 50%, transparent 60%)`,
-                  }}
-                />
               </div>
             </button>
           );

@@ -16,9 +16,7 @@ export default function Preferences() {
 
   const handleSave = () => {
     const prefs: UserPreferences = {
-      location,
-      lifestyle,
-      style,
+      location, lifestyle, style,
       restrictions: { sleevelessAllowed, shortOutfitsAllowed: shortAllowed },
     };
     storage.setPreferences(email, prefs);
@@ -28,19 +26,19 @@ export default function Preferences() {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto animate-fade-in pb-12">
-      <div className="mb-5">
-        <p className="font-display text-[10px] tracking-[0.35em] text-accent/80 uppercase mb-1">Atelier</p>
-        <h1 className="font-display text-3xl font-bold text-foreground">Preferences</h1>
-        <p className="font-body text-xs text-muted-foreground mt-1">Tune VÉRA's recommendations to your taste</p>
+      <div className="text-center mb-8">
+        <p className="font-body text-[10px] uppercase tracking-[0.4em] text-taupe mb-2">Atelier</p>
+        <h1 className="font-display text-3xl font-light italic text-foreground">Preferences</h1>
+        <p className="font-body text-xs text-muted-foreground mt-2 italic">Tune VÉRA to your taste</p>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         <PreferenceCard icon={MapPin} title="Location">
           <input
             value={location}
             onChange={e => setLocation(e.target.value)}
             placeholder="Your city"
-            className="w-full bg-background/60 border border-border rounded-xl px-4 py-3 text-foreground font-body text-sm focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all"
+            className="w-full bg-background border border-border rounded-full px-5 py-3 text-foreground font-body text-sm focus:outline-none focus:ring-1 focus:ring-taupe/40 transition-all"
           />
         </PreferenceCard>
 
@@ -60,7 +58,7 @@ export default function Preferences() {
           </div>
         </PreferenceCard>
 
-        <PreferenceCard icon={Shield} title="Restrictions">
+        <PreferenceCard icon={Shield} title="Care">
           {[
             { label: 'Sleeveless outfits', value: sleevelessAllowed, onChange: setSleevelessAllowed },
             { label: 'Short outfits', value: shortAllowed, onChange: setShortAllowed },
@@ -70,10 +68,10 @@ export default function Preferences() {
                 <span className="font-body text-sm text-foreground">{t.label}</span>
                 <button
                   onClick={() => t.onChange(!t.value)}
-                  className={`w-12 h-7 rounded-full transition-all relative ${t.value ? 'gold-gradient shadow-gold' : 'bg-muted'}`}
+                  className={`w-12 h-7 rounded-full transition-all relative ${t.value ? 'bg-foreground' : 'bg-muted'}`}
                   aria-pressed={t.value}
                 >
-                  <span className={`absolute top-1 w-5 h-5 rounded-full bg-background shadow-sm transition-all duration-300 ${t.value ? 'left-6' : 'left-1'}`} />
+                  <span className={`absolute top-1 w-5 h-5 rounded-full bg-cream shadow-sm transition-all duration-300 ${t.value ? 'left-6' : 'left-1'}`} />
                 </button>
               </div>
               {i < arr.length - 1 && <div className="h-px bg-border/40" />}
@@ -83,12 +81,11 @@ export default function Preferences() {
 
         <button
           onClick={handleSave}
-          className={`relative w-full flex items-center justify-center gap-2 font-body font-semibold py-3.5 rounded-2xl text-sm shadow-luxury transition-all overflow-hidden ${
-            saved ? 'bg-accent text-accent-foreground' : 'gold-gradient text-primary hover:opacity-95'
+          className={`w-full flex items-center justify-center gap-2 font-body py-3.5 rounded-full text-xs uppercase tracking-[0.3em] transition-all ${
+            saved ? 'bg-nude text-foreground' : 'bg-foreground text-cream hover:bg-taupe'
           }`}
         >
-          <div className="absolute top-0 left-0 right-0 h-px bg-white/30" />
-          {saved ? <><Check size={16} />Saved</> : <><Save size={16} />Save Preferences</>}
+          {saved ? <><Check size={14} />Saved</> : <><Save size={14} />Save preferences</>}
         </button>
       </div>
     </div>
@@ -96,20 +93,13 @@ export default function Preferences() {
 }
 
 function PreferenceCard({
-  icon: Icon,
-  title,
-  children,
-}: {
-  icon: LucideIcon;
-  title: string;
-  children: React.ReactNode;
-}) {
+  icon: Icon, title, children,
+}: { icon: LucideIcon; title: string; children: React.ReactNode }) {
   return (
-    <div className="relative rounded-2xl p-5 glass-bubble shadow-card overflow-hidden">
-      <div className="absolute top-0 left-0 right-0 h-px gold-hairline" />
-      <div className="flex items-center gap-2 mb-3">
-        <Icon size={14} className="text-accent" />
-        <h3 className="font-display text-xs font-bold text-foreground tracking-widest uppercase">{title}</h3>
+    <div className="bg-cream rounded-3xl p-6 border border-border/40 shadow-card">
+      <div className="flex items-center gap-2 mb-4">
+        <Icon size={13} className="text-taupe" strokeWidth={1.5} />
+        <h3 className="font-body text-[10px] uppercase tracking-[0.3em] text-taupe">{title}</h3>
       </div>
       {children}
     </div>
@@ -120,10 +110,10 @@ function ChoiceChip({ active, onClick, label }: { active: boolean; onClick: () =
   return (
     <button
       onClick={onClick}
-      className={`flex-1 py-2.5 rounded-xl text-xs font-body font-medium capitalize transition-all duration-300 ${
+      className={`flex-1 py-2.5 rounded-full text-xs font-body capitalize transition-all duration-300 ${
         active
-          ? 'gold-gradient text-primary shadow-gold'
-          : 'bg-background/60 border border-border text-foreground hover:border-accent/40'
+          ? 'bg-foreground text-cream'
+          : 'bg-background border border-border text-foreground hover:border-taupe/40'
       }`}
     >
       {label}

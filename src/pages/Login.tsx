@@ -16,7 +16,6 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     const err = await login(email, password);
     if (err) {
       setError(err);
@@ -27,46 +26,59 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-6">
-      <div className="w-full max-w-md animate-fade-in">
+    <div className="min-h-screen flex items-center justify-center bg-background p-6 relative overflow-hidden">
+      {/* Editorial backdrop image */}
+      <div className="absolute inset-0">
+        <img
+          src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&q=80&auto=format&fit=crop"
+          alt=""
+          className="w-full h-full object-cover opacity-30"
+        />
+        <div className="absolute inset-0 bg-cream/70" />
+      </div>
+
+      <div className="relative w-full max-w-md animate-fade-in">
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-display font-bold tracking-wide text-gold-gradient">VÉRA</h1>
-          <p className="text-muted-foreground mt-2 font-body text-sm tracking-widest uppercase">AI Personal Styling</p>
+          <p className="font-body text-[10px] uppercase tracking-[0.45em] text-taupe mb-3">Personal styling atelier</p>
+          <h1 className="font-display text-5xl font-light italic text-foreground">Véra</h1>
+          <div className="mx-auto mt-4 h-px w-12 bg-nude-deep/50" />
+          <p className="font-body text-xs text-muted-foreground mt-4 italic">Welcome back</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4 bg-cream/85 backdrop-blur-md rounded-3xl p-7 border border-border/40 shadow-arch">
           {error && (
-            <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-xl p-3 text-center animate-scale-in font-body">
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-2xl p-3 text-center animate-scale-in font-body">
               {error}
             </div>
           )}
 
           <div className="space-y-2">
-            <label className="text-xs font-body font-medium uppercase tracking-wider text-muted-foreground">Email</label>
+            <label className="text-[10px] font-body uppercase tracking-[0.25em] text-muted-foreground">Email</label>
             <input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground font-body text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
+              className="w-full bg-background border border-border rounded-full px-5 py-3 text-foreground font-body text-sm focus:outline-none focus:ring-1 focus:ring-taupe/40 transition-all"
               placeholder="your@email.com"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-body font-medium uppercase tracking-wider text-muted-foreground">Password</label>
+            <label className="text-[10px] font-body uppercase tracking-[0.25em] text-muted-foreground">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                className="w-full bg-card border border-border rounded-xl px-4 py-3 pr-12 text-foreground font-body text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
+                className="w-full bg-background border border-border rounded-full px-5 py-3 pr-12 text-foreground font-body text-sm focus:outline-none focus:ring-1 focus:ring-taupe/40 transition-all"
                 placeholder="••••••••"
               />
               <button type="button" onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
@@ -74,15 +86,15 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full gold-gradient text-primary font-body font-semibold py-3 rounded-xl tracking-wide uppercase text-sm hover:opacity-90 transition-opacity shadow-luxury disabled:opacity-60"
+            className="w-full bg-foreground text-cream font-body py-3 rounded-full uppercase tracking-[0.3em] text-xs hover:bg-taupe transition-colors disabled:opacity-60"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground mt-8 font-body">
-          Don't have an account?{' '}
-          <Link to="/signup" className="text-accent hover:underline font-medium">Create one</Link>
+        <p className="text-center text-xs text-muted-foreground mt-7 font-body">
+          New here?{' '}
+          <Link to="/signup" className="text-foreground italic hover:underline">Create an account</Link>
         </p>
       </div>
     </div>
