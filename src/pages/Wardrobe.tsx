@@ -110,22 +110,28 @@ export default function WardrobePage() {
     <div className="px-4 py-6 max-w-lg mx-auto animate-fade-in pb-12">
       <input type="file" ref={fileInputRef} accept="image/*" className="hidden" />
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-1">
-        <div>
-          <p className="font-display text-[10px] tracking-[0.35em] text-accent/80 uppercase mb-1">Atelier</p>
-          <h1 className="font-display text-3xl font-bold text-foreground">Your Wardrobe</h1>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => setShowStats(!showStats)} className={`p-2.5 rounded-xl border transition-all ${showStats ? 'gold-gradient border-transparent text-primary' : 'bg-card border-border hover:border-accent/40'}`}>
-            <BarChart3 size={16} />
-          </button>
-          <button onClick={() => setShowAddSection(true)} className="p-2.5 rounded-xl bg-card border border-border hover:border-accent/40 transition-colors">
-            <Plus size={16} />
-          </button>
-        </div>
+      {/* Editorial header */}
+      <div className="text-center mb-2">
+        <p className="font-body text-[10px] uppercase tracking-[0.4em] text-taupe mb-2">Atelier</p>
+        <h1 className="font-display text-3xl font-light italic text-foreground">Your wardrobe</h1>
+        <p className="font-body text-xs text-muted-foreground mt-2 italic">{totalItems} pieces · {totalWorn} total wears</p>
       </div>
-      <p className="font-body text-xs text-muted-foreground mb-5">{totalItems} pieces · {totalWorn} total wears</p>
+      <div className="flex justify-center gap-2 mb-5 mt-3">
+        <button
+          onClick={() => setShowStats(!showStats)}
+          aria-label="Toggle stats"
+          className={`p-2.5 rounded-full border transition-all ${showStats ? 'bg-foreground border-foreground text-cream' : 'bg-cream border-border/50 text-foreground hover:border-taupe/40'}`}
+        >
+          <BarChart3 size={15} strokeWidth={1.5} />
+        </button>
+        <button
+          onClick={() => setShowAddSection(true)}
+          aria-label="Add section"
+          className="p-2.5 rounded-full bg-cream border border-border/50 text-foreground hover:border-taupe/40 transition-colors"
+        >
+          <Plus size={15} strokeWidth={1.5} />
+        </button>
+      </div>
 
       {/* Stats panel */}
       {showStats && (
