@@ -4,8 +4,27 @@ import { storage } from '@/lib/storage';
 import { useAuth } from '@/contexts/AuthContext';
 import { generateOutfits } from '@/lib/recommendations';
 import { getWeather, type WeatherData } from '@/lib/weather';
-import { Calendar as CalendarIcon, Plus, MapPin, Shirt, Sparkles, TrendingUp } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, MapPin, Shirt, Sparkles, TrendingUp, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import LuxuryHero from '@/components/LuxuryHero';
+
+// Curated luxury fashion imagery (Unsplash, royalty-free)
+const ESSENTIALS = [
+  { name: 'Classic White Shirt', img: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&q=80&auto=format&fit=crop' },
+  { name: 'Tailored Blazer',     img: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80&auto=format&fit=crop' },
+  { name: 'Little Black Dress',  img: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&q=80&auto=format&fit=crop' },
+  { name: 'Quality Denim',       img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&q=80&auto=format&fit=crop' },
+  { name: 'Versatile Sneakers',  img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80&auto=format&fit=crop' },
+];
+
+const TRENDS = [
+  { name: 'Quiet Luxury',    img: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=500&q=80&auto=format&fit=crop' },
+  { name: 'Old Money',       img: 'https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?w=500&q=80&auto=format&fit=crop' },
+  { name: 'Coastal Chic',    img: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=500&q=80&auto=format&fit=crop' },
+  { name: 'Minimalist',      img: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=500&q=80&auto=format&fit=crop' },
+  { name: 'Power Dressing',  img: 'https://images.unsplash.com/photo-1554412933-514a83d2f3c8?w=500&q=80&auto=format&fit=crop' },
+];
+
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 export default function HomePage() {
   const { user } = useAuth();
