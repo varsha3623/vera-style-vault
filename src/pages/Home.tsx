@@ -36,6 +36,11 @@ export default function HomePage() {
   const [showEventForm, setShowEventForm] = useState(false);
   const [eventName, setEventName] = useState('');
   const [eventLocation, setEventLocation] = useState('');
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const today = new Date();
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [showYearPicker, setShowYearPicker] = useState(false);
   const prefs = storage.getPreferences(email);
   const wardrobe = storage.getWardrobe(email);
   const events = storage.getEvents(email);
