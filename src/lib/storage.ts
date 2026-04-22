@@ -217,4 +217,36 @@ export const storage = {
     if (idx !== -1) w.splice(idx, 1); else w.push(id);
     set(userKey('vera_wishlist', email), w);
   },
+
+  // --- Avatar ---
+  setAvatar: (email: string, dataUrl: string | null) => {
+    const users = get<User[]>('vera_users', []);
+    const idx = users.findIndex(u => u.email === email);
+    if (idx === -1) return;
+    if (dataUrl) users[idx].avatar = dataUrl;
+    else delete users[idx].avatar;
+    set('vera_users', users);
+  },
+
+  // --- Reviews ---
+  getReviews: (email: string): Review[] =>
+    get<Review[]>(userKey('vera_reviews', email), []).sort((a, b) => b.createdAt - a.createdAt),
+  addReview: (email: string, review: Omit<Review, 'id' | 'createdAt'>) => {
+    const r = get<Review[]>(userKey('vera_reviews', email), []);
+    r.push({ ...review, id: Date.now().toString(), createdAt: Date.now() });
+    set(userKey('vera_reviews', email), r);
+  },
+  removeReview: (email: string, id: string) => {
+    const r = get<Review[]>(userKey('vera_reviews', email), []).filter(x => x.id !== id);
+    set(userKey('vera_reviews', email), r);
+  },
+
+  // --- Contact messages ---
+  getContactMessages: (email: string): ContactMessage[] =>
+    get<ContactMessage[]>(userKey('vera_contact', email), []).sort((a, b) => b.createdAt - a.createdAt),
+  addContactMessage: (email: string, msg: Omit<ContactMessage, 'id' | 'createdAt'>) => {
+    const m = get<ContactMessage[]>(userKey('vera_contact', email), []);
+    m.push({ ...msg, id: Date.now().toString(), createdAt: Date.now() });
+    set(userKey('vera_contact', email), m);
+  },
 };
