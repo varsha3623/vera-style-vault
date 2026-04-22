@@ -5,6 +5,7 @@ export interface User {
   email: string;
   passwordHash: string;
   onboarded?: boolean;
+  avatar?: string; // data URL
 }
 
 // Legacy interface for migration
@@ -13,6 +14,24 @@ interface LegacyUser {
   email: string;
   password: string;
   onboarded?: boolean;
+  avatar?: string;
+}
+
+export interface Review {
+  id: string;
+  rating: number; // 1–5
+  title: string;
+  body: string;
+  createdAt: number;
+}
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  topic: string;
+  body: string;
+  createdAt: number;
 }
 
 export interface UserPreferences {
