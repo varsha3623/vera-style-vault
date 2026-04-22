@@ -94,8 +94,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
               {user && (
                 <div className="mb-8 pb-6 border-b border-border/50">
-                  <div className="w-14 h-14 rounded-full nude-gradient flex items-center justify-center mb-3 shadow-soft">
-                    <span className="font-display font-medium italic text-xl text-foreground">{user.name.charAt(0)}</span>
+                  <div className="w-14 h-14 rounded-full overflow-hidden border border-border/60 shadow-soft mb-3">
+                    {user.avatar ? (
+                      <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full nude-gradient flex items-center justify-center">
+                        <span className="font-display font-medium italic text-xl text-foreground">{user.name.charAt(0)}</span>
+                      </div>
+                    )}
                   </div>
                   <p className="font-display text-base italic text-foreground">{user.name}</p>
                   <p className="font-body text-[11px] text-muted-foreground tracking-wide">{user.email}</p>
