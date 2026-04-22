@@ -4,7 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { storage } from "@/lib/storage";
 import AppShell from "@/components/AppShell";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
@@ -22,6 +21,23 @@ import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function SessionGate({ children }: { children: React.ReactNode }) {
+  const { loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 animate-fade-in">
+          <div className="w-10 h-10 rounded-full nude-gradient animate-pulse" />
+          <p className="font-body text-[10px] uppercase tracking-[0.4em] text-muted-foreground">
+            VÉRA · loading
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -29,13 +45,21 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <AppShell>{children}</AppShell>;
 }
 
+function PublicOnly({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, user } = useAuth();
+  if (isAuthenticated) {
+    return <Navigate to={user?.onboarded ? '/' : '/onboarding'} replace />;
+  }
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
 
   return (
     <Routes>
-      <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/signup" element={isAuthenticated ? <Navigate to="/" replace /> : <Signup />} />
+      <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
+      <Route path="/signup" element={<PublicOnly><Signup /></PublicOnly>} />
       <Route path="/onboarding" element={
         !isAuthenticated ? <Navigate to="/login" replace /> :
         user?.onboarded ? <Navigate to="/" replace /> :
@@ -60,11 +84,13 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </AuthProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <SessionGate>
+            <AppRoutes />
+          </SessionGate>
+        </AuthProvider>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );

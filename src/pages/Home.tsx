@@ -6,6 +6,7 @@ import { generateOutfits } from '@/lib/recommendations';
 import { getWeather, type WeatherData } from '@/lib/weather';
 import { Calendar as CalendarIcon, Plus, MapPin, ChevronLeft, ChevronRight, ChevronDown, ArrowRight } from 'lucide-react';
 import LuxuryHero from '@/components/LuxuryHero';
+import LazyImage from '@/components/LazyImage';
 
 // Arched "Our Services" trio — a signature reference layout
 const SERVICES = [
@@ -153,10 +154,10 @@ export default function HomePage() {
             >
               {/* Arched image */}
               <div className="relative w-full aspect-[3/4] arch-full overflow-hidden bg-nude-soft border border-border/40 shadow-soft">
-                <img
+                <LazyImage
                   src={svc.img}
                   alt={svc.title}
-                  loading="lazy"
+                  wrapperClassName="absolute inset-0 w-full h-full"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-cream/10 group-hover:bg-cream/0 transition-colors duration-500" />
@@ -200,10 +201,10 @@ export default function HomePage() {
               </button>
             </div>
             <div className="relative h-56 sm:h-auto arch-bottom sm:arch-full overflow-hidden bg-nude-soft">
-              <img
+              <LazyImage
                 src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=700&q=85&auto=format&fit=crop"
                 alt="Editorial styling"
-                loading="lazy"
+                wrapperClassName="absolute inset-0 w-full h-full"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -338,10 +339,10 @@ export default function HomePage() {
           {ESSENTIALS.map((item, i) => (
             <div key={i} className="flex-shrink-0 w-32 group cursor-pointer">
               <div className="w-32 h-40 rounded-2xl overflow-hidden bg-nude-soft border border-border/30 shadow-soft">
-                <img
+                <LazyImage
                   src={item.img}
                   alt={item.name}
-                  loading="lazy"
+                  wrapperClassName="w-full h-full"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
               </div>
@@ -361,13 +362,13 @@ export default function HomePage() {
           {TRENDS.map((trend, i) => (
             <div key={i} className="flex-shrink-0 w-36">
               <div className="relative w-36 h-48 rounded-2xl overflow-hidden shadow-soft border border-border/30 group">
-                <img
+                <LazyImage
                   src={trend.img}
                   alt={trend.name}
-                  loading="lazy"
+                  wrapperClassName="w-full h-full"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
-                <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-cream/90 to-transparent">
+                <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-cream/90 to-transparent pointer-events-none">
                   <p className="font-display text-sm italic text-foreground">{trend.name}</p>
                 </div>
               </div>

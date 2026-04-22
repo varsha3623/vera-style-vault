@@ -2,6 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { storage } from '@/lib/storage';
 import { Settings, LogOut, Heart, Shirt, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import LazyImage from '@/components/LazyImage';
 
 export default function Profile() {
   const { user, logout } = useAuth();
@@ -19,12 +20,13 @@ export default function Profile() {
       <div className="relative bg-cream rounded-3xl overflow-hidden shadow-arch border border-border/40">
         {/* Top arched portrait area */}
         <div className="relative h-44 nude-gradient overflow-hidden">
-          <img
+          <LazyImage
             src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=900&q=85&auto=format&fit=crop"
             alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-60"
+            wrapperClassName="absolute inset-0 w-full h-full"
+            className="w-full h-full object-cover opacity-60"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-cream/0 to-cream" />
+          <div className="absolute inset-0 bg-gradient-to-b from-cream/0 to-cream pointer-events-none" />
         </div>
 
         <div className="relative -mt-14 px-6 pb-7 flex flex-col items-center text-center">

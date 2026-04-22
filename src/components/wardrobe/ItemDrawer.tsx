@@ -1,19 +1,39 @@
+import { useEffect, useState } from 'react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import type { WardrobeItem } from '@/lib/storage';
-import { Eye, Trash2, TrendingUp, Sparkles } from 'lucide-react';
+import { storage, type WardrobeItem } from '@/lib/storage';
+import { Eye, Trash2, TrendingUp, Sparkles, Heart } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Props {
   item: WardrobeItem | null;
+  email: string;
   onClose: () => void;
   onWorn: (id: string) => void;
   onDelete: (id: string) => void;
   totalWornInWardrobe: number;
 }
 
-export default function ItemDrawer({ item, onClose, onWorn, onDelete, totalWornInWardrobe }: Props) {
+export default function ItemDrawer({ item, email, onClose, onWorn, onDelete, totalWornInWardrobe }: Props) {
   const open = !!item;
+  const [wishlist, setWishlist] = useState<string[]>(() => storage.getWishlist(email));
+
+  useEffect(() => {
+    if (open) setWishlist(storage.getWishlist(email));
+  }, [open, email]);
+
   const sharePct = item && totalWornInWardrobe > 0 ? Math.round((item.wornCount / totalWornInWardrobe) * 100) : 0;
   const status = !item ? '' : item.wornCount === 0 ? 'Never worn' : item.wornCount < 3 ? 'Rarely worn' : item.wornCount < 8 ? 'Loved' : 'Iconic';
+  const isSaved = item ? wishlist.includes(item.id) : false;
+
+  const toggleWishlist = () => {
+    if (!item) return;
+    storage.toggleWishlist(email, item.id);
+    const next = storage.getWishlist(email);
+    setWishlist(next);
+    toast(next.includes(item.id) ? 'Saved to wishlist' : 'Removed from wishlist', {
+      description: item.name || item.type,
+    });
+  };
 
   return (
     <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
@@ -21,12 +41,27 @@ export default function ItemDrawer({ item, onClose, onWorn, onDelete, totalWornI
         {item && (
           <>
             <DrawerHeader className="pb-2">
-              <DrawerTitle className="font-display text-2xl italic font-light text-foreground text-left">
-                {item.name || item.type}
-              </DrawerTitle>
-              <p className="font-body text-[10px] text-taupe text-left uppercase tracking-[0.3em] capitalize">
-                {item.type} · {item.color}
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="text-left">
+                  <DrawerTitle className="font-display text-2xl italic font-light text-foreground text-left">
+                    {item.name || item.type}
+                  </DrawerTitle>
+                  <p className="font-body text-[10px] text-taupe text-left uppercase tracking-[0.3em] capitalize mt-1">
+                    {item.type} · {item.color}
+                  </p>
+                </div>
+                <button
+                  onClick={toggleWishlist}
+                  aria-label={isSaved ? 'Remove from wishlist' : 'Save to wishlist'}
+                  className="w-10 h-10 rounded-full bg-background border border-border/50 flex items-center justify-center hover:border-taupe/40 transition-colors shrink-0"
+                >
+                  <Heart
+                    size={15}
+                    strokeWidth={1.5}
+                    className={isSaved ? 'text-destructive fill-destructive' : 'text-taupe'}
+                  />
+                </button>
+              </div>
             </DrawerHeader>
 
             <div className="px-4 pb-6 overflow-y-auto">
