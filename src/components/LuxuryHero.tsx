@@ -1,5 +1,6 @@
 import type { WeatherData } from '@/lib/weather';
 import { MapPin } from 'lucide-react';
+import LazyImage from './LazyImage';
 
 type Props = {
   name: string;
@@ -11,8 +12,7 @@ type Props = {
 
 /**
  * Editorial full-bleed hero — large still-life fashion image, soft cream wash,
- * serif headline, and a discreet weather plate. No 3D, no parallax: a calm,
- * magazine-style first impression matching the new VÉRA identity.
+ * serif headline, and a discreet weather plate. Calm, magazine-style first impression.
  */
 export default function LuxuryHero({ name, greeting, weather, time, location }: Props) {
   const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -21,11 +21,12 @@ export default function LuxuryHero({ name, greeting, weather, time, location }: 
     <div className="relative w-full rounded-[2rem] overflow-hidden shadow-arch border border-border/60 bg-cream">
       {/* Editorial image */}
       <div className="relative h-[420px] w-full overflow-hidden">
-        <img
+        <LazyImage
           src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&q=85&auto=format&fit=crop"
           alt="Editorial fashion still life"
-          className="absolute inset-0 w-full h-full object-cover"
-          loading="eager"
+          eager
+          wrapperClassName="absolute inset-0 w-full h-full"
+          className="w-full h-full object-cover"
         />
 
         {/* Soft cream wash to keep type legible */}

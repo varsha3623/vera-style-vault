@@ -6,6 +6,7 @@ import { generateOutfits } from '@/lib/recommendations';
 import { getWeather, type WeatherData } from '@/lib/weather';
 import { Calendar as CalendarIcon, Plus, MapPin, ChevronLeft, ChevronRight, ChevronDown, ArrowRight } from 'lucide-react';
 import LuxuryHero from '@/components/LuxuryHero';
+import LazyImage from '@/components/LazyImage';
 
 // Arched "Our Services" trio — a signature reference layout
 const SERVICES = [
