@@ -135,25 +135,25 @@ export default function WardrobePage() {
 
       {/* Stats panel */}
       {showStats && (
-        <div className="bg-card rounded-2xl p-4 border border-border shadow-card mb-5 animate-scale-in">
+        <div className="bg-cream rounded-2xl p-4 border border-border/40 shadow-card mb-5 animate-scale-in">
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-background rounded-xl p-3 text-center border border-border/50">
-              <p className="font-display text-2xl font-bold text-foreground">{totalItems}</p>
+              <p className="font-display text-2xl font-light italic text-foreground">{totalItems}</p>
               <p className="font-body text-[10px] text-muted-foreground uppercase tracking-wider">Pieces</p>
             </div>
             <div className="bg-background rounded-xl p-3 text-center border border-border/50">
-              <p className="font-display text-2xl font-bold text-foreground">{totalWorn}</p>
+              <p className="font-display text-2xl font-light italic text-foreground">{totalWorn}</p>
               <p className="font-body text-[10px] text-muted-foreground uppercase tracking-wider">Wears</p>
             </div>
             {mostWorn && (
               <div className="bg-background rounded-xl p-3 col-span-2 border border-border/50">
-                <p className="font-body text-[10px] text-accent uppercase tracking-wider mb-1">Most Worn</p>
+                <p className="font-body text-[10px] text-taupe uppercase tracking-wider mb-1">Most worn</p>
                 <p className="font-body text-sm text-foreground">{mostWorn.name || mostWorn.type} ({mostWorn.wornCount}×)</p>
               </div>
             )}
             {leastWorn && leastWorn.wornCount === 0 && (
-              <div className="bg-accent/10 rounded-xl p-3 col-span-2 border border-accent/20">
-                <p className="font-body text-[10px] text-accent uppercase tracking-wider mb-1">Never Worn</p>
+              <div className="bg-nude-soft/60 rounded-xl p-3 col-span-2 border border-nude/40">
+                <p className="font-body text-[10px] text-taupe uppercase tracking-wider mb-1">Never worn</p>
                 <p className="font-body text-sm text-foreground">{leastWorn.name || leastWorn.type} — try it today</p>
               </div>
             )}
@@ -161,7 +161,7 @@ export default function WardrobePage() {
         </div>
       )}
 
-      {/* Gold-accented category tabs */}
+      {/* Category tabs */}
       <CategoryTabs
         sections={allSections}
         active={activeSection}
@@ -170,7 +170,7 @@ export default function WardrobePage() {
         onSelect={(s) => { setActiveSection(s); setSearchQuery(''); }}
       />
 
-      <div className="h-px gold-hairline my-3" />
+      <div className="h-px nude-hairline my-3" />
 
       {/* Search */}
       {showSearch && (
@@ -180,7 +180,7 @@ export default function WardrobePage() {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder={`Search ${activeSection.toLowerCase()}...`}
-            className="w-full bg-card border border-border rounded-xl pl-9 pr-4 py-2 text-foreground font-body text-xs focus:outline-none focus:ring-1 focus:ring-accent/50"
+            className="w-full bg-cream border border-border rounded-full pl-9 pr-4 py-2 text-foreground font-body text-xs focus:outline-none focus:ring-1 focus:ring-taupe/40"
           />
         </div>
       )}
@@ -196,9 +196,9 @@ export default function WardrobePage() {
       {filteredItems.length > 0 && (
         <button
           onClick={handleUpload}
-          className="mt-4 w-full py-3 rounded-xl border border-dashed border-accent/40 bg-card/50 hover:bg-accent/5 transition-colors flex items-center justify-center gap-2 font-body text-xs text-foreground/80"
+          className="mt-4 w-full py-3 rounded-full border border-dashed border-nude-deep/40 bg-cream/60 hover:bg-nude-soft transition-colors flex items-center justify-center gap-2 font-body text-xs text-foreground/80 uppercase tracking-[0.2em]"
         >
-          <Upload size={14} className="text-accent" />
+          <Upload size={13} className="text-taupe" strokeWidth={1.5} />
           Add another {activeSection.toLowerCase().replace(/s$/, '')}
         </button>
       )}
@@ -206,6 +206,7 @@ export default function WardrobePage() {
       {/* Detail drawer */}
       <ItemDrawer
         item={selectedItem}
+        email={email}
         onClose={() => setSelectedItem(null)}
         onWorn={handleWorn}
         onDelete={handleDelete}
@@ -226,12 +227,12 @@ export default function WardrobePage() {
               {COLOR_OPTIONS.map(c => (
                 <button key={c} onClick={() => setUploadColor(c)}
                   className={`px-3 py-1.5 rounded-full text-xs font-body capitalize transition-all ${
-                    uploadColor === c ? 'gold-gradient text-primary shadow-card' : 'bg-card border border-border text-foreground hover:border-accent/40'
+                    uploadColor === c ? 'bg-foreground text-cream shadow-card' : 'bg-cream border border-border text-foreground hover:border-taupe/40'
                   }`}>{c}</button>
               ))}
             </div>
-            <button onClick={confirmUpload} className="w-full gold-gradient text-primary font-body font-semibold py-3 rounded-xl text-sm shadow-luxury">
-              Add to Wardrobe
+            <button onClick={confirmUpload} className="w-full bg-foreground text-cream font-body py-3 rounded-full text-xs uppercase tracking-[0.3em] hover:bg-taupe transition-colors">
+              Add to wardrobe
             </button>
           </div>
         </div>
@@ -245,13 +246,13 @@ export default function WardrobePage() {
             <button onClick={() => setShowAddSection(false)} className="absolute top-3 right-3 text-muted-foreground hover:text-foreground">
               <X size={18} />
             </button>
-            <h3 className="font-display text-lg font-bold mb-4 text-foreground">New Section</h3>
+            <h3 className="font-display text-xl italic font-light mb-4 text-foreground">New section</h3>
             <input value={newSectionName} onChange={e => setNewSectionName(e.target.value)} placeholder="e.g., Lehenga, Jackets"
-              className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground font-body text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 mb-4"
+              className="w-full bg-cream border border-border rounded-full px-5 py-3 text-foreground font-body text-sm focus:outline-none focus:ring-1 focus:ring-taupe/40 mb-4"
               onKeyDown={e => e.key === 'Enter' && handleAddSection()} />
             <button onClick={handleAddSection} disabled={!newSectionName.trim()}
-              className="w-full gold-gradient text-primary font-body font-semibold py-3 rounded-xl text-sm disabled:opacity-50 shadow-luxury">
-              Create Section
+              className="w-full bg-foreground text-cream font-body py-3 rounded-full text-xs uppercase tracking-[0.3em] disabled:opacity-50 hover:bg-taupe transition-colors">
+              Create section
             </button>
           </div>
         </div>
