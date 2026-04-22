@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Eye, EyeOff } from 'lucide-react';
+import LazyImage from '@/components/LazyImage';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -29,12 +30,14 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-6 relative overflow-hidden">
       {/* Editorial backdrop image */}
       <div className="absolute inset-0">
-        <img
+        <LazyImage
           src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&q=80&auto=format&fit=crop"
           alt=""
+          eager
+          wrapperClassName="absolute inset-0 w-full h-full"
           className="w-full h-full object-cover opacity-30"
         />
-        <div className="absolute inset-0 bg-cream/70" />
+        <div className="absolute inset-0 bg-cream/70 pointer-events-none" />
       </div>
 
       <div className="relative w-full max-w-md animate-fade-in">
