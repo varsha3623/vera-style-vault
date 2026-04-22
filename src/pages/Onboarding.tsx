@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { storage, type UserPreferences } from '@/lib/storage';
-import { MapPin, Briefcase, Palette, Shield, ChevronRight, ChevronLeft } from 'lucide-react';
+import { MapPin, Briefcase, Palette, Shield, ChevronRight, ChevronLeft, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 const steps = [
   { key: 'Location', icon: MapPin },
@@ -18,20 +19,43 @@ export default function Onboarding() {
   const [style, setStyle] = useState<UserPreferences['style']>('elegant');
   const [sleevelessAllowed, setSleevelessAllowed] = useState(true);
   const [shortAllowed, setShortAllowed] = useState(true);
+  const [touched, setTouched] = useState(false);
   const { user, markOnboarded } = useAuth();
   const navigate = useNavigate();
   const email = user?.email || '';
 
-  const next = () => step < 3 ? setStep(step + 1) : finish();
-  const back = () => step > 0 && setStep(step - 1);
+  const locationError = touched && step === 0 && !location.trim()
+    ? 'Please share your city so VÉRA can read your weather.'
+    : '';
+
+  const canAdvance = () => {
+    if (step === 0) return location.trim().length >= 2;
+    return true;
+  };
+
+  const next = () => {
+    setTouched(true);
+    if (!canAdvance()) return;
+    setTouched(false);
+    if (step < 3) setStep(step + 1);
+    else finish();
+  };
+
+  const back = () => {
+    setTouched(false);
+    if (step > 0) setStep(step - 1);
+  };
 
   const finish = () => {
     const prefs: UserPreferences = {
-      location, lifestyle, style,
+      location: location.trim(), lifestyle, style,
       restrictions: { sleevelessAllowed, shortOutfitsAllowed: shortAllowed },
     };
     storage.setPreferences(email, prefs);
     markOnboarded();
+    toast.success('Welcome to VÉRA', {
+      description: 'Your atelier is ready — let’s curate your first looks.',
+    });
     navigate('/');
   };
 
@@ -52,18 +76,30 @@ export default function Onboarding() {
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          <p className="font-body text-[10px] uppercase tracking-[0.4em] text-taupe mb-2">A few questions</p>
+          <p className="font-body text-[10px] uppercase tracking-[0.4em] text-taupe mb-2">
+            Step {step + 1} of {steps.length}
+          </p>
           <h1 className="font-display text-3xl font-light italic text-foreground">Style assessment</h1>
-          <p className="font-body text-xs text-muted-foreground mt-2 italic">Help VÉRA understand your taste</p>
+          <p className="font-body text-xs text-muted-foreground mt-2 italic">
+            {steps[step].key} · help VÉRA understand your taste
+          </p>
         </div>
 
-        {/* Progress dots */}
-        <div className="flex justify-center gap-2 mb-9">
-          {steps.map((s, i) => (
-            <div key={s.key} className={`h-1.5 rounded-full transition-all duration-500 ${
-              i === step ? 'w-8 bg-foreground' : i < step ? 'w-4 bg-nude-deep' : 'w-4 bg-border'
-            }`} />
-          ))}
+        {/* Progress bar + dots */}
+        <div className="mb-9">
+          <div className="flex justify-center gap-2 mb-3">
+            {steps.map((s, i) => (
+              <div key={s.key} className={`h-1.5 rounded-full transition-all duration-500 ${
+                i === step ? 'w-8 bg-foreground' : i < step ? 'w-4 bg-nude-deep' : 'w-4 bg-border'
+              }`} />
+            ))}
+          </div>
+          <div className="h-px bg-border/50 mx-auto max-w-[80%]">
+            <div
+              className="h-full bg-foreground/70 transition-all duration-500"
+              style={{ width: `${((step + 1) / steps.length) * 100}%` }}
+            />
+          </div>
         </div>
 
         <div className="bg-cream rounded-3xl p-7 border border-border/40 shadow-card min-h-[320px]">
@@ -76,12 +112,26 @@ export default function Onboarding() {
                 <h2 className="font-display text-xl italic text-foreground">Where are you?</h2>
                 <p className="font-body text-[11px] text-muted-foreground mt-1.5">For weather-aware looks</p>
               </div>
-              <input
-                value={location}
-                onChange={e => setLocation(e.target.value)}
-                placeholder="New York, London, Mumbai…"
-                className="w-full bg-background border border-border rounded-full px-5 py-3 text-foreground font-body text-sm focus:outline-none focus:ring-1 focus:ring-taupe/40 transition-all"
-              />
+              <div>
+                <input
+                  value={location}
+                  onChange={e => { setLocation(e.target.value); if (touched) setTouched(false); }}
+                  onBlur={() => setTouched(true)}
+                  placeholder="New York, London, Mumbai…"
+                  aria-invalid={!!locationError}
+                  className={`w-full bg-background border rounded-full px-5 py-3 text-foreground font-body text-sm focus:outline-none focus:ring-1 transition-all ${
+                    locationError
+                      ? 'border-destructive/60 focus:ring-destructive/30'
+                      : 'border-border focus:ring-taupe/40'
+                  }`}
+                />
+                {locationError && (
+                  <div className="flex items-center gap-1.5 mt-2 px-2 animate-fade-in">
+                    <AlertCircle size={11} className="text-destructive shrink-0" />
+                    <p className="font-body text-[11px] text-destructive italic">{locationError}</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -176,7 +226,7 @@ export default function Onboarding() {
           )}
           <button
             onClick={next}
-            disabled={step === 0 && !location}
+            disabled={step === 0 && !location.trim()}
             className="flex items-center justify-center gap-1 flex-1 bg-foreground text-cream font-body py-3 rounded-full uppercase tracking-[0.3em] text-xs hover:bg-taupe transition-colors disabled:opacity-50"
           >
             {step === 3 ? 'Complete' : 'Continue'}
