@@ -51,6 +51,10 @@
     --espresso: 24 18% 16%;
     --rose-blush: 18 35% 78%;
     --sand: 32 25% 82%;
+    /* Subtle premium gold accent — used sparingly on key actions */
+    --gold: 38 48% 62%;
+    --gold-soft: 40 50% 78%;
+    --gold-deep: 34 42% 48%;
 
     /* Soft editorial shadows */
     --shadow-soft: 0 8px 30px -10px hsl(24 20% 30% / 0.10);
