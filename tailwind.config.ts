@@ -30,9 +30,11 @@ export default {
         popover: { DEFAULT: "hsl(var(--popover))", foreground: "hsl(var(--popover-foreground))" },
         card: { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
         gold: {
-          DEFAULT: "hsl(var(--nude-deep))",
-          light: "hsl(var(--rose-blush))",
-          dark: "hsl(var(--taupe))",
+          DEFAULT: "hsl(var(--gold))",
+          soft: "hsl(var(--gold-soft))",
+          deep: "hsl(var(--gold-deep))",
+          light: "hsl(var(--gold-soft))",
+          dark: "hsl(var(--gold-deep))",
         },
         burgundy: {
           DEFAULT: "hsl(var(--taupe))",

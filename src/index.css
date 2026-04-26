@@ -51,6 +51,10 @@
     --espresso: 24 18% 16%;
     --rose-blush: 18 35% 78%;
     --sand: 32 25% 82%;
+    /* Subtle premium gold accent — used sparingly on key actions */
+    --gold: 38 48% 62%;
+    --gold-soft: 40 50% 78%;
+    --gold-deep: 34 42% 48%;
 
     /* Soft editorial shadows */
     --shadow-soft: 0 8px 30px -10px hsl(24 20% 30% / 0.10);
@@ -153,12 +157,19 @@
     background: linear-gradient(90deg, transparent, hsl(var(--nude-deep) / 0.5), transparent);
   }
   .text-gold-gradient {
-    background: linear-gradient(135deg, hsl(var(--taupe)), hsl(var(--nude-deep)), hsl(var(--rose-blush)));
+    background: linear-gradient(135deg, hsl(var(--gold-deep)), hsl(var(--gold)), hsl(var(--gold-soft)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
+  .gold-accent-gradient {
+    background: linear-gradient(135deg, hsl(var(--gold-soft)) 0%, hsl(var(--gold)) 55%, hsl(var(--gold-deep)) 100%);
+  }
+  .gold-shimmer {
+    background: linear-gradient(120deg, hsl(var(--gold-soft)) 0%, hsl(var(--cream)) 40%, hsl(var(--gold)) 60%, hsl(var(--gold-deep)) 100%);
+    background-size: 200% 100%;
+  }
   .shadow-gold {
-    box-shadow: 0 8px 26px -10px hsl(var(--nude-deep) / 0.30);
+    box-shadow: 0 10px 30px -10px hsl(var(--gold) / 0.40), 0 0 0 1px hsl(var(--gold-soft) / 0.35) inset;
   }
   .shadow-luxury {
     box-shadow: var(--shadow-editorial);
