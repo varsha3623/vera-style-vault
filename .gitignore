@@ -1,0 +1,8 @@
+__pycache__/
+.venv/
+uploads/
+db/wardrobe_metadata.json
+db/*.bak
+db/*.migrated
+wardrobe_metadata.json
+wardrobe_metadata.json.*
