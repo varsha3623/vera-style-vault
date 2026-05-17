@@ -50,7 +50,7 @@ export interface CloudPreferences {
   style: string | null;
   sleeveless_allowed: boolean;
   short_outfits_allowed: boolean;
-  extra: Record<string, unknown>;
+  extra: Record<string, any>;
 }
 
 // ---------- Wardrobe ----------
@@ -111,12 +111,12 @@ export async function getPreferences(userId: string): Promise<CloudPreferences |
   return data as CloudPreferences | null;
 }
 
-export async function savePreferences(userId: string, prefs: Partial<CloudPreferences>) {
+export async function savePreferences(userId: string, prefs: Partial<Omit<CloudPreferences, 'user_id' | 'extra'>> & { extra?: any }) {
   const { error } = await supabase.from('preferences').upsert({
     user_id: userId,
     ...prefs,
     updated_at: new Date().toISOString(),
-  });
+  } as any);
   if (error) throw error;
 }
 
