@@ -1,262 +1,191 @@
-import { useState, useRef, useMemo } from 'react';
-import { storage, type WardrobeItem } from '@/lib/storage';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Upload, X, Search, BarChart3 } from 'lucide-react';
-import CategoryTabs from '@/components/wardrobe/CategoryTabs';
-import ShelfCarousel from '@/components/wardrobe/ShelfCarousel';
-import ItemDrawer from '@/components/wardrobe/ItemDrawer';
+import {
+  listWardrobe, uploadWardrobeImage, createWardrobeItem,
+  deleteWardrobeItem, markItemWorn, analyzeItem, type CloudWardrobeItem,
+} from '@/lib/cloud';
+import { Upload, Loader2, Sparkles, Trash2, Check, X } from 'lucide-react';
+import { toast } from 'sonner';
+import LazyImage from '@/components/LazyImage';
 
-const DEFAULT_SECTIONS = ['Tops', 'Bottoms', 'Dresses', 'Traditional', 'Shoes', 'Accessories'];
-
-const SECTION_MONOGRAM: Record<string, string> = {
-  Tops: '01', Bottoms: '02', Dresses: '03', Traditional: '04', Shoes: '05', Accessories: '06',
-};
-
-const COLOR_OPTIONS = ['black', 'white', 'navy', 'beige', 'red', 'blue', 'green', 'pink', 'gray', 'brown', 'cream', 'denim', 'gold'];
+const CATEGORIES = ['all', 'tops', 'jeans', 'trousers', 'skirts', 'dresses', 'ethnic', 'footwear', 'accessories', 'jackets', 'handbags'];
 
 export default function WardrobePage() {
   const { user } = useAuth();
-  const email = user?.email || '';
-  const [wardrobe, setWardrobe] = useState(storage.getWardrobe(email));
-  const customSections = storage.getCustomSections(email);
-  const allSections = useMemo(() => [...DEFAULT_SECTIONS, ...customSections], [customSections]);
+  const [items, setItems] = useState<CloudWardrobeItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [uploading, setUploading] = useState(false);
+  const [selected, setSelected] = useState<CloudWardrobeItem | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const [activeSection, setActiveSection] = useState<string>(allSections[0]);
-  const [showAddSection, setShowAddSection] = useState(false);
-  const [newSectionName, setNewSectionName] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showStats, setShowStats] = useState(false);
-  const [uploadColor, setUploadColor] = useState('neutral');
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const [pendingFile, setPendingFile] = useState<{ section: string; dataUrl: string; name: string } | null>(null);
-  const [selectedItem, setSelectedItem] = useState<WardrobeItem | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const counts = useMemo(() => {
-    const c: Record<string, number> = {};
-    allSections.forEach(s => { c[s] = wardrobe.filter(i => i.type.toLowerCase() === s.toLowerCase()).length; });
-    return c;
-  }, [wardrobe, allSections]);
-
-  const sectionItems = (section: string) =>
-    wardrobe.filter(i => i.type.toLowerCase() === section.toLowerCase());
-
-  const filteredItems = useMemo(() => {
-    const items = sectionItems(activeSection);
-    if (!searchQuery) return items;
-    const q = searchQuery.toLowerCase();
-    return items.filter(i => (i.name || i.type).toLowerCase().includes(q) || i.color.toLowerCase().includes(q));
-  }, [wardrobe, activeSection, searchQuery]);
-
-  const handleUpload = () => {
-    const input = fileInputRef.current;
-    if (!input) return;
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPendingFile({ section: activeSection, dataUrl: reader.result as string, name: file.name.replace(/\.[^.]+$/, '') });
-        setUploadColor('neutral');
-        setShowColorPicker(true);
-      };
-      reader.readAsDataURL(file);
-    };
-    input.value = '';
-    input.click();
-  };
-
-  const confirmUpload = () => {
-    if (!pendingFile) return;
-    const newItem: WardrobeItem = {
-      id: Date.now().toString(),
-      type: pendingFile.section,
-      image: pendingFile.dataUrl,
-      color: uploadColor,
-      wornCount: 0,
-      name: pendingFile.name,
-    };
-    storage.addWardrobeItem(email, newItem);
-    setWardrobe(storage.getWardrobe(email));
-    setShowColorPicker(false);
-    setPendingFile(null);
-  };
-
-  const handleDelete = (id: string) => {
-    storage.removeWardrobeItem(email, id);
-    setWardrobe(storage.getWardrobe(email));
-  };
-
-  const handleWorn = (id: string) => {
-    storage.incrementWorn(email, id);
-    setWardrobe(storage.getWardrobe(email));
-  };
-
-  const handleAddSection = () => {
-    if (newSectionName.trim()) {
-      storage.addCustomSection(email, newSectionName.trim());
-      setNewSectionName('');
-      setShowAddSection(false);
+  const load = async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      setItems(await listWardrobe(user.id));
+    } catch (e) {
+      toast.error('Could not load wardrobe', { description: (e as Error).message });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const totalItems = wardrobe.length;
-  const totalWorn = wardrobe.reduce((a, b) => a + b.wornCount, 0);
-  const mostWorn = wardrobe.length > 0 ? [...wardrobe].sort((a, b) => b.wornCount - a.wornCount)[0] : null;
-  const leastWorn = wardrobe.length > 0 ? [...wardrobe].sort((a, b) => a.wornCount - b.wornCount)[0] : null;
-  const showSearch = sectionItems(activeSection).length > 3;
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (file.size > 6 * 1024 * 1024) {
+      toast.error('Image too large', { description: 'Please choose under 6MB.' });
+      return;
+    }
+    setUploading(true);
+    try {
+      const url = await uploadWardrobeImage(user.id, file);
+      const item = await createWardrobeItem(user.id, url);
+      // Optimistic add
+      setItems((p) => [item, ...p]);
+      toast.success('Item uploaded', { description: 'VÉRA is analyzing it…' });
+      // Fire-and-forget AI analysis
+      analyzeItem(item.id, url).then(() => {
+        load();
+        toast.success('Analyzed', { description: 'AI tags added.' });
+      }).catch((err) => {
+        toast.error('Analysis failed', { description: err.message });
+      });
+    } catch (err) {
+      toast.error('Upload failed', { description: (err as Error).message });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const remove = async (id: string) => {
+    await deleteWardrobeItem(id);
+    setItems((p) => p.filter((i) => i.id !== id));
+    setSelected(null);
+    toast('Removed from wardrobe');
+  };
+
+  const worn = async (it: CloudWardrobeItem) => {
+    await markItemWorn(it.id, it.worn_count);
+    setItems((p) => p.map((i) => i.id === it.id ? { ...i, worn_count: i.worn_count + 1 } : i));
+  };
+
+  const visible = filter === 'all' ? items : items.filter((i) => i.category === filter);
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto animate-fade-in pb-12">
-      <input type="file" ref={fileInputRef} accept="image/*" className="hidden" />
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
 
-      {/* Editorial header */}
-      <div className="text-center mb-2">
+      <div className="text-center mb-6">
         <p className="font-body text-[10px] uppercase tracking-[0.4em] text-taupe mb-2">Atelier</p>
         <h1 className="font-display text-3xl font-light italic text-foreground">Your wardrobe</h1>
-        <p className="font-body text-xs text-muted-foreground mt-2 italic">{totalItems} pieces · {totalWorn} total wears</p>
-      </div>
-      <div className="flex justify-center gap-2 mb-5 mt-3">
-        <button
-          onClick={() => setShowStats(!showStats)}
-          aria-label="Toggle stats"
-          className={`p-2.5 rounded-full border transition-all ${showStats ? 'bg-foreground border-foreground text-cream' : 'bg-cream border-border/50 text-foreground hover:border-taupe/40'}`}
-        >
-          <BarChart3 size={15} strokeWidth={1.5} />
-        </button>
-        <button
-          onClick={() => setShowAddSection(true)}
-          aria-label="Add section"
-          className="p-2.5 rounded-full bg-cream border border-border/50 text-foreground hover:border-taupe/40 transition-colors"
-        >
-          <Plus size={15} strokeWidth={1.5} />
-        </button>
+        <p className="font-body text-xs text-muted-foreground mt-2 italic">{items.length} pieces · {items.filter(i => i.ai_analyzed).length} analyzed</p>
       </div>
 
-      {/* Stats panel */}
-      {showStats && (
-        <div className="bg-cream rounded-2xl p-4 border border-border/40 shadow-card mb-5 animate-scale-in">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-background rounded-xl p-3 text-center border border-border/50">
-              <p className="font-display text-2xl font-light italic text-foreground">{totalItems}</p>
-              <p className="font-body text-[10px] text-muted-foreground uppercase tracking-wider">Pieces</p>
+      {/* Category filter */}
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+        {CATEGORIES.map((c) => (
+          <button
+            key={c}
+            onClick={() => setFilter(c)}
+            className={`shrink-0 px-3 py-1.5 rounded-full font-body text-[11px] uppercase tracking-[0.2em] border transition-all ${
+              filter === c ? 'bg-foreground text-cream border-foreground' : 'bg-cream border-border text-foreground hover:border-taupe/40'
+            }`}
+          >{c}</button>
+        ))}
+      </div>
+
+      {/* Upload card */}
+      <button
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+        className="w-full mb-5 py-4 rounded-2xl border border-dashed border-nude-deep/40 bg-cream hover:bg-nude-soft transition-colors flex items-center justify-center gap-2 font-body text-xs text-foreground uppercase tracking-[0.25em] disabled:opacity-60"
+      >
+        {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={13} strokeWidth={1.5} />}
+        {uploading ? 'Uploading…' : 'Add an item'}
+      </button>
+
+      {/* Grid */}
+      {loading ? (
+        <div className="grid grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="aspect-[3/4] rounded-2xl bg-nude-soft animate-pulse" />
+          ))}
+        </div>
+      ) : visible.length === 0 ? (
+        <div className="text-center py-16 animate-fade-in">
+          <div className="w-16 h-16 rounded-full nude-gradient mx-auto flex items-center justify-center mb-4">
+            <Sparkles size={20} className="text-gold-deep" strokeWidth={1.5} />
+          </div>
+          <p className="font-display text-xl italic text-foreground mb-1">Empty shelf</p>
+          <p className="font-body text-xs text-muted-foreground italic">Upload pieces to begin curation.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-3">
+          {visible.map((it) => (
+            <button key={it.id} onClick={() => setSelected(it)} className="group relative aspect-[3/4] rounded-2xl overflow-hidden bg-cream border border-border/40 shadow-soft hover:shadow-arch transition-shadow">
+              <LazyImage src={it.image_url} alt={it.name ?? it.category ?? 'item'} wrapperClassName="absolute inset-0" className="w-full h-full object-cover" />
+              {!it.ai_analyzed && (
+                <span className="absolute top-1.5 right-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-cream/90 text-[8px] font-body uppercase tracking-wider text-taupe">
+                  <Loader2 size={8} className="animate-spin" /> AI
+                </span>
+              )}
+              {it.category && (
+                <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-foreground/80 text-cream text-[8px] font-body uppercase tracking-wider">
+                  {it.category}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Detail sheet */}
+      {selected && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" onClick={() => setSelected(null)} />
+          <div className="relative bg-background border border-border rounded-3xl p-5 w-full max-w-sm shadow-arch animate-scale-in">
+            <button onClick={() => setSelected(null)} className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"><X size={18} /></button>
+            <div className="aspect-square rounded-2xl overflow-hidden mb-4 bg-nude-soft">
+              <img src={selected.image_url} alt="" className="w-full h-full object-cover" />
             </div>
-            <div className="bg-background rounded-xl p-3 text-center border border-border/50">
-              <p className="font-display text-2xl font-light italic text-foreground">{totalWorn}</p>
-              <p className="font-body text-[10px] text-muted-foreground uppercase tracking-wider">Wears</p>
+            <h3 className="font-display text-xl italic text-foreground mb-1">{selected.name ?? 'Unnamed piece'}</h3>
+            {selected.ai_description && <p className="font-body text-xs text-muted-foreground italic mb-3">{selected.ai_description}</p>}
+            <div className="grid grid-cols-2 gap-2 mb-4 text-[10px] font-body uppercase tracking-wider">
+              {selected.category && <Detail label="Category" value={selected.category} />}
+              {selected.style && <Detail label="Style" value={selected.style} />}
+              {selected.primary_color && <Detail label="Color" value={selected.primary_color} />}
+              {selected.aesthetic && <Detail label="Aesthetic" value={selected.aesthetic} />}
             </div>
-            {mostWorn && (
-              <div className="bg-background rounded-xl p-3 col-span-2 border border-border/50">
-                <p className="font-body text-[10px] text-taupe uppercase tracking-wider mb-1">Most worn</p>
-                <p className="font-body text-sm text-foreground">{mostWorn.name || mostWorn.type} ({mostWorn.wornCount}×)</p>
+            {selected.occasions?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {selected.occasions.map((o) => <span key={o} className="px-2 py-0.5 rounded-full bg-nude-soft text-[10px] font-body text-taupe uppercase tracking-wider">{o}</span>)}
               </div>
             )}
-            {leastWorn && leastWorn.wornCount === 0 && (
-              <div className="bg-nude-soft/60 rounded-xl p-3 col-span-2 border border-nude/40">
-                <p className="font-body text-[10px] text-taupe uppercase tracking-wider mb-1">Never worn</p>
-                <p className="font-body text-sm text-foreground">{leastWorn.name || leastWorn.type} — try it today</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Category tabs */}
-      <CategoryTabs
-        sections={allSections}
-        active={activeSection}
-        counts={counts}
-        monogram={SECTION_MONOGRAM}
-        onSelect={(s) => { setActiveSection(s); setSearchQuery(''); }}
-      />
-
-      <div className="h-px nude-hairline my-3" />
-
-      {/* Search */}
-      {showSearch && (
-        <div className="relative mb-4">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder={`Search ${activeSection.toLowerCase()}...`}
-            className="w-full bg-cream border border-border rounded-full pl-9 pr-4 py-2 text-foreground font-body text-xs focus:outline-none focus:ring-1 focus:ring-taupe/40"
-          />
-        </div>
-      )}
-
-      {/* 3D shelf carousel */}
-      <ShelfCarousel
-        items={filteredItems}
-        onSelect={setSelectedItem}
-        onUpload={handleUpload}
-      />
-
-      {/* Upload CTA */}
-      {filteredItems.length > 0 && (
-        <button
-          onClick={handleUpload}
-          className="mt-4 w-full py-3 rounded-full border border-dashed border-nude-deep/40 bg-cream/60 hover:bg-nude-soft transition-colors flex items-center justify-center gap-2 font-body text-xs text-foreground/80 uppercase tracking-[0.2em]"
-        >
-          <Upload size={13} className="text-taupe" strokeWidth={1.5} />
-          Add another {activeSection.toLowerCase().replace(/s$/, '')}
-        </button>
-      )}
-
-      {/* Detail drawer */}
-      <ItemDrawer
-        item={selectedItem}
-        email={email}
-        onClose={() => setSelectedItem(null)}
-        onWorn={handleWorn}
-        onDelete={handleDelete}
-        totalWornInWardrobe={totalWorn}
-      />
-
-      {/* Color picker modal */}
-      {showColorPicker && pendingFile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-          <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => { setShowColorPicker(false); setPendingFile(null); }} />
-          <div className="relative bg-background border border-border rounded-2xl p-6 w-full max-w-sm shadow-luxury animate-scale-in">
-            <h3 className="font-display text-lg font-bold mb-2 text-foreground">Add Item</h3>
-            <p className="font-body text-xs text-muted-foreground mb-4">Select the dominant color</p>
-            <div className="w-full h-32 rounded-xl overflow-hidden mb-4 bg-card">
-              <img src={pendingFile.dataUrl} alt="" className="w-full h-full object-contain" />
+            <div className="flex gap-2">
+              <button onClick={() => worn(selected)} className="flex-1 py-2.5 rounded-full bg-foreground text-cream text-[11px] font-body uppercase tracking-[0.25em] hover:bg-taupe transition-colors inline-flex items-center justify-center gap-1.5">
+                <Check size={12} /> Wore it ({selected.worn_count})
+              </button>
+              <button onClick={() => remove(selected.id)} className="p-2.5 rounded-full border border-border text-destructive hover:bg-destructive/10 transition-colors">
+                <Trash2 size={14} />
+              </button>
             </div>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {COLOR_OPTIONS.map(c => (
-                <button key={c} onClick={() => setUploadColor(c)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-body capitalize transition-all ${
-                    uploadColor === c ? 'bg-foreground text-cream shadow-card' : 'bg-cream border border-border text-foreground hover:border-taupe/40'
-                  }`}>{c}</button>
-              ))}
-            </div>
-            <button onClick={confirmUpload} className="w-full bg-foreground text-cream font-body py-3 rounded-full text-xs uppercase tracking-[0.3em] hover:bg-taupe transition-colors">
-              Add to wardrobe
-            </button>
           </div>
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Add section modal */}
-      {showAddSection && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-          <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setShowAddSection(false)} />
-          <div className="relative bg-background border border-border rounded-2xl p-6 w-full max-w-sm shadow-luxury animate-scale-in">
-            <button onClick={() => setShowAddSection(false)} className="absolute top-3 right-3 text-muted-foreground hover:text-foreground">
-              <X size={18} />
-            </button>
-            <h3 className="font-display text-xl italic font-light mb-4 text-foreground">New section</h3>
-            <input value={newSectionName} onChange={e => setNewSectionName(e.target.value)} placeholder="e.g., Lehenga, Jackets"
-              className="w-full bg-cream border border-border rounded-full px-5 py-3 text-foreground font-body text-sm focus:outline-none focus:ring-1 focus:ring-taupe/40 mb-4"
-              onKeyDown={e => e.key === 'Enter' && handleAddSection()} />
-            <button onClick={handleAddSection} disabled={!newSectionName.trim()}
-              className="w-full bg-foreground text-cream font-body py-3 rounded-full text-xs uppercase tracking-[0.3em] disabled:opacity-50 hover:bg-taupe transition-colors">
-              Create section
-            </button>
-          </div>
-        </div>
-      )}
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-cream rounded-xl p-2 border border-border/40">
+      <p className="text-taupe">{label}</p>
+      <p className="font-display italic text-sm normal-case text-foreground tracking-normal">{value}</p>
     </div>
   );
 }
