@@ -23,19 +23,19 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Isolate the 3D stack so it only loads with the hero
-          three: ["three"],
-          "react-three": ["@react-three/fiber", "@react-three/drei"],
-          // Split common UI/vendor for better caching
-          radix: [
-            "@radix-ui/react-dialog",
-            "@radix-ui/react-dropdown-menu",
-            "@radix-ui/react-popover",
-            "@radix-ui/react-tabs",
-            "@radix-ui/react-toast",
-            "@radix-ui/react-tooltip",
-          ],
+        manualChunks(id) {
+          if (id.includes('three')) return 'three';
+          if (id.includes('@react-three/fiber') || id.includes('@react-three/drei')) return 'react-three';
+          if ([
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-tooltip',
+          ].some((pkg) => id.includes(pkg))) {
+            return 'radix';
+          }
         },
       },
     },
