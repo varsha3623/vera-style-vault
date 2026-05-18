@@ -212,8 +212,8 @@ export default function Profile() {
               { label: 'Location', value: prefs.location || '—' },
               { label: 'Lifestyle', value: prefs.lifestyle },
               { label: 'Style', value: prefs.style },
-              { label: 'Sleeveless', value: prefs.restrictions.sleevelessAllowed ? 'Allowed' : 'Not allowed' },
-              { label: 'Short outfits', value: prefs.restrictions.shortOutfitsAllowed ? 'Allowed' : 'Not allowed' },
+              { label: 'Sleeveless', value: prefs.sleeveless_allowed ? 'Allowed' : 'Not allowed' },
+              { label: 'Short outfits', value: prefs.short_outfits_allowed ? 'Allowed' : 'Not allowed' },
             ].map((item, i, arr) => (
               <div key={item.label}>
                 <div className="flex justify-between items-center py-3">
