@@ -55,7 +55,7 @@ export default function OutfitsPage() {
         toast.error('No outfits returned', { description: 'Try a different occasion or add more pieces.' });
       } else {
         toast.success(`${fresh.length} new looks curated`);
-        setOutfits((p) => [...fresh, ...p].slice(0, 20));
+        setOutfits((p) => [...fresh, ...p].slice(0, 5));
       }
     } catch (e) {
       toast.error('Generation failed', { description: (e as Error).message });
