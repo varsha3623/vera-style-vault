@@ -146,21 +146,35 @@ export default function WardrobePage() {
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-3">
-          {visible.map((it) => (
-            <button key={it.id} onClick={() => setSelected(it)} className="group relative aspect-[3/4] rounded-2xl overflow-hidden bg-cream border border-border/40 shadow-soft hover:shadow-arch transition-shadow">
-              <LazyImage src={it.image_url} alt={it.name ?? it.category ?? 'item'} wrapperClassName="absolute inset-0" className="w-full h-full object-cover" />
-              {!it.ai_analyzed && (
-                <span className="absolute top-1.5 right-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-cream/90 text-[8px] font-body uppercase tracking-wider text-taupe">
-                  <Loader2 size={8} className="animate-spin" /> AI
-                </span>
-              )}
-              {it.category && (
-                <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-foreground/80 text-cream text-[8px] font-body uppercase tracking-wider">
-                  {it.category}
-                </span>
-              )}
-            </button>
-          ))}
+          {visible.map((it) => {
+            const recent = daysSince(it.last_worn_at);
+            const isResting = recent != null && recent < 7;
+            return (
+              <button key={it.id} onClick={() => setSelected(it)} className="group relative aspect-[3/4] rounded-2xl overflow-hidden bg-cream border border-border/40 shadow-soft hover:shadow-arch transition-shadow">
+                <LazyImage src={it.image_url} alt={it.name ?? it.category ?? 'item'} wrapperClassName="absolute inset-0" className={`w-full h-full object-cover ${isResting ? 'opacity-70' : ''}`} />
+                {!it.ai_analyzed && (
+                  <span className="absolute top-1.5 right-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-cream/90 text-[8px] font-body uppercase tracking-wider text-taupe">
+                    <Loader2 size={8} className="animate-spin" /> AI
+                  </span>
+                )}
+                {isResting && (
+                  <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-gold-deep text-cream text-[8px] font-body uppercase tracking-wider shadow-soft">
+                    Resting
+                  </span>
+                )}
+                {it.category && (
+                  <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-foreground/80 text-cream text-[8px] font-body uppercase tracking-wider">
+                    {it.category}
+                  </span>
+                )}
+                {it.last_worn_at && (
+                  <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-full bg-cream/90 text-foreground text-[8px] font-body tracking-wider">
+                    {lastWornLabel(it.last_worn_at)}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
