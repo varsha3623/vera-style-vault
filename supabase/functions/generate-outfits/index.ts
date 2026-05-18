@@ -90,15 +90,21 @@ Deno.serve(async (req) => {
     try { parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}"); } catch { parsed = {}; }
     const outfits = (parsed.outfits ?? []).filter((o) => Array.isArray(o.item_ids) && o.item_ids.length >= 2);
 
-    // Validate ids against wardrobe; strip outfits that reuse worn-in-last-7-days items
+    // Validate ids; strip outfits reusing worn-in-last-7-days items; dedupe against today + within batch
     const validIds = new Set(items.map((i) => i.id));
-    const cleaned = outfits.map((o) => ({
-      ...o,
-      item_ids: o.item_ids.filter((id: string) => validIds.has(id)),
-    }))
-      .filter((o) => o.item_ids.length >= 2)
-      .filter((o) => !o.item_ids.some((id: string) => wornItemIds.has(id)))
-      .slice(0, requested);
+    const sig = (ids: string[]) => [...ids].sort().join("|");
+    const seen = new Set<string>((todayOutfits ?? []).map((o: any) => sig(o.item_ids ?? [])));
+    const cleaned: any[] = [];
+    for (const o of outfits) {
+      const itemIds = o.item_ids.filter((id: string) => validIds.has(id));
+      if (itemIds.length < 2) continue;
+      if (itemIds.some((id: string) => wornItemIds.has(id))) continue;
+      const s = sig(itemIds);
+      if (seen.has(s)) continue;
+      seen.add(s);
+      cleaned.push({ ...o, item_ids: itemIds });
+      if (cleaned.length >= requested) break;
+    }
 
     let saved: any[] = cleaned;
     if (persist && cleaned.length) {
