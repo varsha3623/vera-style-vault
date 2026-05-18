@@ -10,6 +10,20 @@ import LazyImage from '@/components/LazyImage';
 
 const CATEGORIES = ['all', 'tops', 'jeans', 'trousers', 'skirts', 'dresses', 'ethnic', 'footwear', 'accessories', 'jackets', 'handbags'];
 
+function daysSince(iso: string | null): number | null {
+  if (!iso) return null;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+}
+function lastWornLabel(iso: string | null): string {
+  const d = daysSince(iso);
+  if (d == null) return 'Never worn';
+  if (d === 0) return 'Worn today';
+  if (d === 1) return 'Worn yesterday';
+  if (d < 7) return `Worn ${d}d ago`;
+  if (d < 30) return `Worn ${Math.floor(d / 7)}w ago`;
+  return `Worn ${Math.floor(d / 30)}mo ago`;
+}
+
 export default function WardrobePage() {
   const { user } = useAuth();
   const [items, setItems] = useState<CloudWardrobeItem[]>([]);
