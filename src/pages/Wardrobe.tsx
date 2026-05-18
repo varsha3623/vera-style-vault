@@ -84,7 +84,7 @@ export default function WardrobePage() {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto animate-fade-in pb-12">
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
 
       <div className="text-center mb-6">
         <p className="font-body text-[10px] uppercase tracking-[0.4em] text-taupe mb-2">Atelier</p>
