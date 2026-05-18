@@ -34,32 +34,38 @@ export default function WardrobePage() {
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    if (file.size > 6 * 1024 * 1024) {
-      toast.error('Image too large', { description: 'Please choose under 6MB.' });
-      return;
-    }
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length || !user) return;
+    const valid = files.filter((f) => {
+      if (f.size > 6 * 1024 * 1024) {
+        toast.error(`${f.name} skipped`, { description: 'Over 6MB.' });
+        return false;
+      }
+      return true;
+    });
+    if (!valid.length) { if (fileRef.current) fileRef.current.value = ''; return; }
     setUploading(true);
-    try {
-      const url = await uploadWardrobeImage(user.id, file);
-      const item = await createWardrobeItem(user.id, url);
-      // Optimistic add
-      setItems((p) => [item, ...p]);
-      toast.success('Item uploaded', { description: 'VÉRA is analyzing it…' });
-      // Fire-and-forget AI analysis
-      analyzeItem(item.id, url).then(() => {
-        load();
-        toast.success('Analyzed', { description: 'AI tags added.' });
-      }).catch((err) => {
-        toast.error('Analysis failed', { description: err.message });
-      });
-    } catch (err) {
-      toast.error('Upload failed', { description: (err as Error).message });
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = '';
+    const total = valid.length;
+    let done = 0;
+    if (total > 1) toast(`Uploading ${total} pieces…`);
+    for (const file of valid) {
+      try {
+        const url = await uploadWardrobeImage(user.id, file);
+        const item = await createWardrobeItem(user.id, url);
+        setItems((p) => [item, ...p]);
+        analyzeItem(item.id, url).then(() => {
+          load();
+        }).catch((err) => {
+          toast.error('Analysis failed', { description: err.message });
+        });
+        done++;
+      } catch (err) {
+        toast.error('Upload failed', { description: (err as Error).message });
+      }
     }
+    if (done > 0) toast.success(`${done} item${done > 1 ? 's' : ''} uploaded`, { description: 'VÉRA is analyzing…' });
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = '';
   };
 
   const remove = async (id: string) => {
