@@ -30,7 +30,7 @@ export default function OutfitsPage() {
     try {
       const [w, o] = await Promise.all([
         listWardrobe(user.id),
-        listOutfits(user.id, { limit: 12 }),
+        listOutfits(user.id, { todayOnly: true, limit: 5 }),
       ]);
       setWardrobe(w);
       setOutfits(o);
