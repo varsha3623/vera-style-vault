@@ -121,9 +121,13 @@ export async function savePreferences(userId: string, prefs: Partial<Omit<CloudP
 }
 
 // ---------- Outfits ----------
-export async function listOutfits(userId: string, opts?: { savedOnly?: boolean; limit?: number }): Promise<CloudOutfit[]> {
+export async function listOutfits(userId: string, opts?: { savedOnly?: boolean; limit?: number; todayOnly?: boolean }): Promise<CloudOutfit[]> {
   let q = supabase.from('outfits').select('*').eq('user_id', userId).order('created_at', { ascending: false });
   if (opts?.savedOnly) q = q.eq('saved', true);
+  if (opts?.todayOnly) {
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    q = q.gte('created_at', start.toISOString());
+  }
   if (opts?.limit) q = q.limit(opts.limit);
   const { data, error } = await q;
   if (error) throw error;
