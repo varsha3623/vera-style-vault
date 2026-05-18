@@ -180,9 +180,9 @@ export default function Profile() {
       {/* Stat trio */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Pieces', value: wardrobe.length, icon: Shirt },
-          { label: 'Looks', value: outfits.length, icon: Sparkles },
-          { label: 'Saved', value: wishlist.length, icon: Heart },
+          { label: 'Pieces', value: wardrobeCount, icon: Shirt },
+          { label: 'Looks', value: outfitsCount, icon: Sparkles },
+          { label: 'Saved', value: savedCount, icon: Heart },
         ].map(stat => {
           const Icon = stat.icon;
           return (
