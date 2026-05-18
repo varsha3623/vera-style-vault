@@ -19,19 +19,34 @@ Deno.serve(async (req) => {
     if (!userId) return json({ error: "Unauthorized" }, 401);
 
     const body = await req.json().catch(() => ({}));
-    const { occasion = "everyday", mood, weather, count = 5, persist = true } = body;
+    const { occasion = "everyday", mood, weather, count = 4, persist = true } = body;
 
-    const [{ data: items }, { data: prefs }, { data: recentOutfits }] = await Promise.all([
+    // Daily generation cap
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const [{ data: items }, { data: prefs }, { data: todayOutfits }, { data: wornRecent }] = await Promise.all([
       supabase.from("wardrobe_items").select("*").eq("user_id", userId),
       supabase.from("preferences").select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("outfits").select("item_ids,title").eq("user_id", userId).order("created_at", { ascending: false }).limit(20),
+      supabase.from("outfits").select("id,item_ids").eq("user_id", userId).gte("created_at", startOfDay.toISOString()),
+      supabase.from("outfits").select("item_ids,worn_at").eq("user_id", userId).eq("worn", true).gte("worn_at", sevenDaysAgo.toISOString()),
     ]);
 
     if (!items || items.length < 2) {
       return json({ error: "Add at least 2 wardrobe items first.", outfits: [] }, 200);
     }
 
-    // Compact wardrobe representation for the model
+    const DAILY_CAP = 5;
+    const alreadyToday = (todayOutfits ?? []).length;
+    if (alreadyToday >= DAILY_CAP) {
+      return json({ error: `Daily limit reached (${DAILY_CAP}/day). Come back tomorrow for fresh looks.`, outfits: [] }, 200);
+    }
+    const requested = Math.max(1, Math.min(count, DAILY_CAP - alreadyToday));
+
+    // Items to AVOID (worn in last 7 days)
+    const wornItemIds = new Set<string>();
+    (wornRecent ?? []).forEach((o: any) => (o.item_ids ?? []).forEach((id: string) => wornItemIds.add(id)));
+
     const wardrobe = items.map((i) => ({
       id: i.id,
       name: i.name,
@@ -42,17 +57,16 @@ Deno.serve(async (req) => {
       seasons: i.seasons,
       occasions: i.occasions,
       worn: i.worn_count,
+      worn_recently: wornItemIds.has(i.id),
     }));
 
-    const recent = (recentOutfits ?? []).map((o) => o.item_ids);
-
-    const system = `You are VÉRA, a luxury personal stylist. Compose ${count} distinct outfit recommendations using ONLY items in the provided wardrobe. Prioritize least-worn pieces, color harmony, and the occasion/mood/weather. Avoid combinations matching any of the recent_outfits item_id sets. Return STRICT JSON: { "outfits": [{ "title": string, "reasoning": string (2-3 sentences, stylist voice), "item_ids": string[] (subset of wardrobe ids, 2-5 items), "occasion": string, "confidence": number 0-1, "color_harmony": short explanation, "suggested_accessories": string[] (0-3 ideas not in wardrobe) }] }`;
+    const system = `You are VÉRA, a luxury personal stylist. Compose ${requested} distinct outfit recommendations using ONLY items in the provided wardrobe. STRICT RULES: (1) Do NOT use any item marked "worn_recently": true — those pieces were worn in the last 7 days and need rest. (2) Prioritize least-worn pieces, color harmony, and the occasion/mood/weather. (3) Each outfit must be unique. Return STRICT JSON: { "outfits": [{ "title": string, "reasoning": string (2-3 sentences, stylist voice), "item_ids": string[] (subset of wardrobe ids, 2-5 items), "occasion": string, "confidence": number 0-1, "color_harmony": short explanation, "suggested_accessories": string[] (0-3 ideas not in wardrobe) }] }`;
 
     const userMsg = JSON.stringify({
       occasion, mood, weather,
       preferences: prefs ?? null,
       wardrobe,
-      recent_outfits: recent,
+      avoid_item_ids: Array.from(wornItemIds),
     });
 
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
