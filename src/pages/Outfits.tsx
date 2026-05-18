@@ -50,7 +50,7 @@ export default function OutfitsPage() {
     }
     setGenerating(true);
     try {
-      const fresh = await generateOutfits({ occasion, mood, count: 5 });
+      const fresh = await generateOutfits({ occasion, mood, count: 4 });
       if (!fresh.length) {
         toast.error('No outfits returned', { description: 'Try a different occasion or add more pieces.' });
       } else {
