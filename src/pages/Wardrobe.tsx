@@ -195,6 +195,18 @@ export default function WardrobePage() {
               {selected.primary_color && <Detail label="Color" value={selected.primary_color} />}
               {selected.aesthetic && <Detail label="Aesthetic" value={selected.aesthetic} />}
             </div>
+            {(() => {
+              const d = daysSince(selected.last_worn_at);
+              if (d == null) return null;
+              const resting = d < 7;
+              return (
+                <div className={`mb-4 rounded-2xl border px-3 py-2 text-[11px] font-body ${resting ? 'border-gold/40 bg-gold-deep/5 text-gold-deep' : 'border-border/50 bg-cream text-taupe'}`}>
+                  {resting
+                    ? <>Resting · {lastWornLabel(selected.last_worn_at)}. Excluded from looks for {7 - d} more day{7 - d > 1 ? 's' : ''}.</>
+                    : <>{lastWornLabel(selected.last_worn_at)} — available for styling.</>}
+                </div>
+              );
+            })()}
             {selected.occasions?.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-4">
                 {selected.occasions.map((o) => <span key={o} className="px-2 py-0.5 rounded-full bg-nude-soft text-[10px] font-body text-taupe uppercase tracking-wider">{o}</span>)}
