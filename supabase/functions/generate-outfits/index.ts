@@ -90,12 +90,15 @@ Deno.serve(async (req) => {
     try { parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}"); } catch { parsed = {}; }
     const outfits = (parsed.outfits ?? []).filter((o) => Array.isArray(o.item_ids) && o.item_ids.length >= 2);
 
-    // Validate ids against wardrobe
+    // Validate ids against wardrobe; strip outfits that reuse worn-in-last-7-days items
     const validIds = new Set(items.map((i) => i.id));
     const cleaned = outfits.map((o) => ({
       ...o,
       item_ids: o.item_ids.filter((id: string) => validIds.has(id)),
-    })).filter((o) => o.item_ids.length >= 2);
+    }))
+      .filter((o) => o.item_ids.length >= 2)
+      .filter((o) => !o.item_ids.some((id: string) => wornItemIds.has(id)))
+      .slice(0, requested);
 
     let saved: any[] = cleaned;
     if (persist && cleaned.length) {
