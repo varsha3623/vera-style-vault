@@ -112,7 +112,7 @@ export default function WardrobePage() {
         className="w-full mb-5 py-4 rounded-2xl border border-dashed border-nude-deep/40 bg-cream hover:bg-nude-soft transition-colors flex items-center justify-center gap-2 font-body text-xs text-foreground uppercase tracking-[0.25em] disabled:opacity-60"
       >
         {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={13} strokeWidth={1.5} />}
-        {uploading ? 'Uploading…' : 'Add an item'}
+        {uploading ? 'Uploading…' : 'Add items (one or many)'}
       </button>
 
       {/* Grid */}
