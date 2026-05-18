@@ -30,7 +30,7 @@ export default function OutfitsPage() {
     try {
       const [w, o] = await Promise.all([
         listWardrobe(user.id),
-        listOutfits(user.id, { limit: 12 }),
+        listOutfits(user.id, { todayOnly: true, limit: 5 }),
       ]);
       setWardrobe(w);
       setOutfits(o);
@@ -55,7 +55,7 @@ export default function OutfitsPage() {
         toast.error('No outfits returned', { description: 'Try a different occasion or add more pieces.' });
       } else {
         toast.success(`${fresh.length} new looks curated`);
-        setOutfits((p) => [...fresh, ...p].slice(0, 20));
+        setOutfits((p) => [...fresh, ...p].slice(0, 5));
       }
     } catch (e) {
       toast.error('Generation failed', { description: (e as Error).message });

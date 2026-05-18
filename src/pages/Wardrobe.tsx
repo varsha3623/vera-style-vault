@@ -10,6 +10,20 @@ import LazyImage from '@/components/LazyImage';
 
 const CATEGORIES = ['all', 'tops', 'jeans', 'trousers', 'skirts', 'dresses', 'ethnic', 'footwear', 'accessories', 'jackets', 'handbags'];
 
+function daysSince(iso: string | null): number | null {
+  if (!iso) return null;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+}
+function lastWornLabel(iso: string | null): string {
+  const d = daysSince(iso);
+  if (d == null) return 'Never worn';
+  if (d === 0) return 'Worn today';
+  if (d === 1) return 'Worn yesterday';
+  if (d < 7) return `Worn ${d}d ago`;
+  if (d < 30) return `Worn ${Math.floor(d / 7)}w ago`;
+  return `Worn ${Math.floor(d / 30)}mo ago`;
+}
+
 export default function WardrobePage() {
   const { user } = useAuth();
   const [items, setItems] = useState<CloudWardrobeItem[]>([]);
@@ -132,21 +146,35 @@ export default function WardrobePage() {
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-3">
-          {visible.map((it) => (
-            <button key={it.id} onClick={() => setSelected(it)} className="group relative aspect-[3/4] rounded-2xl overflow-hidden bg-cream border border-border/40 shadow-soft hover:shadow-arch transition-shadow">
-              <LazyImage src={it.image_url} alt={it.name ?? it.category ?? 'item'} wrapperClassName="absolute inset-0" className="w-full h-full object-cover" />
-              {!it.ai_analyzed && (
-                <span className="absolute top-1.5 right-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-cream/90 text-[8px] font-body uppercase tracking-wider text-taupe">
-                  <Loader2 size={8} className="animate-spin" /> AI
-                </span>
-              )}
-              {it.category && (
-                <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-foreground/80 text-cream text-[8px] font-body uppercase tracking-wider">
-                  {it.category}
-                </span>
-              )}
-            </button>
-          ))}
+          {visible.map((it) => {
+            const recent = daysSince(it.last_worn_at);
+            const isResting = recent != null && recent < 7;
+            return (
+              <button key={it.id} onClick={() => setSelected(it)} className="group relative aspect-[3/4] rounded-2xl overflow-hidden bg-cream border border-border/40 shadow-soft hover:shadow-arch transition-shadow">
+                <LazyImage src={it.image_url} alt={it.name ?? it.category ?? 'item'} wrapperClassName="absolute inset-0" className={`w-full h-full object-cover ${isResting ? 'opacity-70' : ''}`} />
+                {!it.ai_analyzed && (
+                  <span className="absolute top-1.5 right-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-cream/90 text-[8px] font-body uppercase tracking-wider text-taupe">
+                    <Loader2 size={8} className="animate-spin" /> AI
+                  </span>
+                )}
+                {isResting && (
+                  <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-gold-deep text-cream text-[8px] font-body uppercase tracking-wider shadow-soft">
+                    Resting
+                  </span>
+                )}
+                {it.category && (
+                  <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-foreground/80 text-cream text-[8px] font-body uppercase tracking-wider">
+                    {it.category}
+                  </span>
+                )}
+                {it.last_worn_at && (
+                  <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-full bg-cream/90 text-foreground text-[8px] font-body tracking-wider">
+                    {lastWornLabel(it.last_worn_at)}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -167,6 +195,18 @@ export default function WardrobePage() {
               {selected.primary_color && <Detail label="Color" value={selected.primary_color} />}
               {selected.aesthetic && <Detail label="Aesthetic" value={selected.aesthetic} />}
             </div>
+            {(() => {
+              const d = daysSince(selected.last_worn_at);
+              if (d == null) return null;
+              const resting = d < 7;
+              return (
+                <div className={`mb-4 rounded-2xl border px-3 py-2 text-[11px] font-body ${resting ? 'border-gold/40 bg-gold-deep/5 text-gold-deep' : 'border-border/50 bg-cream text-taupe'}`}>
+                  {resting
+                    ? <>Resting · {lastWornLabel(selected.last_worn_at)}. Excluded from looks for {7 - d} more day{7 - d > 1 ? 's' : ''}.</>
+                    : <>{lastWornLabel(selected.last_worn_at)} — available for styling.</>}
+                </div>
+              );
+            })()}
             {selected.occasions?.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-4">
                 {selected.occasions.map((o) => <span key={o} className="px-2 py-0.5 rounded-full bg-nude-soft text-[10px] font-body text-taupe uppercase tracking-wider">{o}</span>)}
