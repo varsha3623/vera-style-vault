@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { storage } from '@/lib/storage';
+import { supabase } from '@/integrations/supabase/client';
+import { listWardrobe, listOutfits, getPreferences, type CloudPreferences } from '@/lib/cloud';
 import { Settings, LogOut, Heart, Shirt, Sparkles, Camera, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -8,53 +9,80 @@ import LazyImage from '@/components/LazyImage';
 
 export default function Profile() {
   const { user, logout, refreshUser } = useAuth();
-  const email = user?.email || '';
-  const prefs = storage.getPreferences(email);
-  const wardrobe = storage.getWardrobe(email);
-  const outfits = storage.getOutfits(email);
-  const wishlist = storage.getWishlist(email) || [];
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [prefs, setPrefs] = useState<CloudPreferences | null>(null);
+  const [wardrobeCount, setWardrobeCount] = useState(0);
+  const [outfitsCount, setOutfitsCount] = useState(0);
+  const [savedCount, setSavedCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const [p, w, o, s] = await Promise.all([
+          getPreferences(user.id),
+          listWardrobe(user.id),
+          listOutfits(user.id),
+          listOutfits(user.id, { savedOnly: true }),
+        ]);
+        setPrefs(p);
+        setWardrobeCount(w.length);
+        setOutfitsCount(o.length);
+        setSavedCount(s.length);
+      } catch {/* ignore */}
+    })();
+  }, [user?.id]);
 
   const initial = user?.name?.charAt(0).toUpperCase() || 'V';
   const avatar = user?.avatar;
 
   const handlePickPhoto = () => fileRef.current?.click();
 
+  const uploadAvatarBlob = async (blob: Blob) => {
+    if (!user) return;
+    const path = `${user.id}/avatar-${Date.now()}.jpg`;
+    const { error: upErr } = await supabase.storage.from('avatars').upload(path, blob, {
+      cacheControl: '3600', upsert: true, contentType: 'image/jpeg',
+    });
+    if (upErr) throw upErr;
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+    const { error: updErr } = await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', user.id);
+    if (updErr) throw updErr;
+    await refreshUser();
+  };
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please choose an image file');
-      return;
-    }
-    if (file.size > 4 * 1024 * 1024) {
-      toast.error('Image must be under 4MB');
-      return;
-    }
+    if (!file.type.startsWith('image/')) { toast.error('Please choose an image file'); return; }
+    if (file.size > 6 * 1024 * 1024) { toast.error('Image must be under 6MB'); return; }
     setUploading(true);
-    // Resize/compress to 512×512 for snappy storage
     const img = new Image();
     const reader = new FileReader();
     reader.onload = () => {
-      img.onload = () => {
-        const size = 512;
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { setUploading(false); return; }
-        // Cover-fit crop
-        const ratio = Math.max(size / img.width, size / img.height);
-        const w = img.width * ratio;
-        const h = img.height * ratio;
-        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        storage.setAvatar(email, dataUrl);
-        refreshUser();
-        toast.success('Profile photo updated');
-        setUploading(false);
+      img.onload = async () => {
+        try {
+          const size = 512;
+          const canvas = document.createElement('canvas');
+          canvas.width = size; canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Canvas unavailable');
+          const ratio = Math.max(size / img.width, size / img.height);
+          const w = img.width * ratio;
+          const h = img.height * ratio;
+          ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+          const blob: Blob = await new Promise((res, rej) =>
+            canvas.toBlob((b) => b ? res(b) : rej(new Error('Encode failed')), 'image/jpeg', 0.85)
+          );
+          await uploadAvatarBlob(blob);
+          toast.success('Profile photo updated');
+        } catch (err) {
+          toast.error('Upload failed', { description: (err as Error).message });
+        } finally {
+          setUploading(false);
+        }
       };
       img.onerror = () => { toast.error('Could not read that image'); setUploading(false); };
       img.src = reader.result as string;
@@ -63,10 +91,15 @@ export default function Profile() {
     reader.readAsDataURL(file);
   };
 
-  const handleRemovePhoto = () => {
-    storage.setAvatar(email, null);
-    refreshUser();
-    toast('Photo removed');
+  const handleRemovePhoto = async () => {
+    if (!user) return;
+    try {
+      await supabase.from('profiles').update({ avatar_url: null }).eq('id', user.id);
+      await refreshUser();
+      toast('Photo removed');
+    } catch (e) {
+      toast.error('Could not remove', { description: (e as Error).message });
+    }
   };
 
   return (
