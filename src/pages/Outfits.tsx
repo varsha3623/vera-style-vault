@@ -30,7 +30,7 @@ export default function OutfitsPage() {
     try {
       const [w, o] = await Promise.all([
         listWardrobe(user.id),
-        listOutfits(user.id, { todayOnly: true, limit: 5 }),
+        listOutfits(user.id, { todayOnly: true }),
       ]);
       setWardrobe(w);
       setOutfits(o);
@@ -49,7 +49,6 @@ export default function OutfitsPage() {
     (async () => {
       const todays = await load();
       if (todays.length === 0 && wardrobe.length >= 2) {
-        // fire-and-forget initial daily batch
         autoGenerate(5);
       }
     })();
@@ -61,7 +60,7 @@ export default function OutfitsPage() {
     if (!user) return;
     const now = new Date();
     const next = new Date(now);
-    next.setHours(24, 0, 5, 0); // 5s after midnight local
+    next.setHours(24, 0, 5, 0);
     const ms = next.getTime() - now.getTime();
     const t = setTimeout(async () => {
       const todays = await load();
@@ -74,15 +73,13 @@ export default function OutfitsPage() {
     setGenerating(true);
     try {
       const fresh = await generateOutfits({ occasion, mood, count: n });
-      if (fresh.length) setOutfits((p) => [...fresh, ...p].slice(0, 5));
+      if (fresh.length) setOutfits((p) => [...fresh, ...p]);
     } catch (e) {
-      // silent on auto-run
       console.warn('auto-generate failed', e);
     } finally {
       setGenerating(false);
     }
   };
-
 
   const regenerate = async () => {
     if (wardrobe.length < 2) {
@@ -91,12 +88,14 @@ export default function OutfitsPage() {
     }
     setGenerating(true);
     try {
-      const fresh = await generateOutfits({ occasion, mood, count: 4 });
+      // First batch of the day = 5, subsequent batches = 3 (no cap)
+      const count = outfits.length === 0 ? 5 : 3;
+      const fresh = await generateOutfits({ occasion, mood, count });
       if (!fresh.length) {
         toast.error('No outfits returned', { description: 'Try a different occasion or add more pieces.' });
       } else {
         toast.success(`${fresh.length} new looks curated`);
-        setOutfits((p) => [...fresh, ...p].slice(0, 5));
+        setOutfits((p) => [...fresh, ...p]);
       }
     } catch (e) {
       toast.error('Generation failed', { description: (e as Error).message });
@@ -172,8 +171,17 @@ export default function OutfitsPage() {
         <button onClick={regenerate} disabled={generating}
           className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-full gold-accent-gradient text-cream font-body text-xs uppercase tracking-[0.3em] shadow-gold hover:opacity-90 transition-opacity disabled:opacity-60">
           {generating ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
-          {generating ? 'AI is styling…' : 'Generate outfits'}
+          {generating
+            ? 'AI is styling…'
+            : outfits.length === 0
+              ? "Generate today's edit"
+              : 'Generate more'}
         </button>
+        {outfits.length > 0 && (
+          <p className="font-body text-[10px] text-center text-taupe/80 italic mt-2">
+            Unlimited regenerations · Today's edit stays pinned
+          </p>
+        )}
       </div>
 
       {/* Outfit list */}
@@ -191,25 +199,62 @@ export default function OutfitsPage() {
           <p className="font-display text-xl italic text-foreground mb-1">No looks yet</p>
           <p className="font-body text-xs text-muted-foreground italic">Tap Generate to let VÉRA style you.</p>
         </div>
-      ) : (
-        <div className="space-y-5">
-          {outfits.map((o) => (
-            <OutfitCard
-              key={o.id}
-              outfit={o}
-              items={o.item_ids.map((id) => itemMap.get(id)).filter(Boolean) as CloudWardrobeItem[]}
-              onSave={() => onSave(o)}
-              onWear={() => onWear(o)}
-              onSkip={() => onSkip(o)}
-              onCollage={() => buildCollage(o)}
-              collageLoading={collageLoading === o.id}
-            />
-          ))}
-        </div>
-      )}
+      ) : (() => {
+        // Outfits arrive sorted by created_at DESC. The first batch of the day
+        // is the OLDEST 5 (i.e. the tail of the list). Anything beyond that
+        // are user-requested "more" picks (the head of the list).
+        const ordered = [...outfits];
+        const initialCount = Math.min(5, ordered.length);
+        const initial = ordered.slice(-initialCount);          // today's edit
+        const extras = ordered.slice(0, ordered.length - initialCount); // newer extras
+        const renderCard = (o: CloudOutfit) => (
+          <OutfitCard
+            key={o.id}
+            outfit={o}
+            items={o.item_ids.map((id) => itemMap.get(id)).filter(Boolean) as CloudWardrobeItem[]}
+            onSave={() => onSave(o)}
+            onWear={() => onWear(o)}
+            onSkip={() => onSkip(o)}
+            onCollage={() => buildCollage(o)}
+            collageLoading={collageLoading === o.id}
+          />
+        );
+        return (
+          <div className="space-y-8">
+            <section>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="px-2.5 py-0.5 rounded-full bg-foreground text-cream text-[9px] font-body uppercase tracking-[0.3em]">
+                  Today's edit
+                </span>
+                <div className="flex-1 h-px gold-accent-gradient opacity-40" />
+                <span className="font-body text-[10px] text-taupe uppercase tracking-wider">
+                  {initial.length}/5
+                </span>
+              </div>
+              <div className="space-y-5">{initial.map(renderCard)}</div>
+            </section>
+
+            {extras.length > 0 && (
+              <section>
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="px-2.5 py-0.5 rounded-full bg-gold-deep/10 border border-gold/40 text-gold-deep text-[9px] font-body uppercase tracking-[0.3em] inline-flex items-center gap-1">
+                    <Sparkles size={9} strokeWidth={1.8} /> More for you
+                  </span>
+                  <div className="flex-1 h-px gold-accent-gradient opacity-40" />
+                  <span className="font-body text-[10px] text-taupe uppercase tracking-wider">
+                    +{extras.length}
+                  </span>
+                </div>
+                <div className="space-y-5">{extras.map(renderCard)}</div>
+              </section>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
+
 
 function OutfitCard({ outfit, items, onSave, onWear, onSkip, onCollage, collageLoading }: {
   outfit: CloudOutfit; items: CloudWardrobeItem[];
