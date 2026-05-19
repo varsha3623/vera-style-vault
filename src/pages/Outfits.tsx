@@ -254,9 +254,7 @@ export default function OutfitsPage() {
     </div>
   );
 }
-    </div>
-  );
-}
+
 
 function OutfitCard({ outfit, items, onSave, onWear, onSkip, onCollage, collageLoading }: {
   outfit: CloudOutfit; items: CloudWardrobeItem[];
