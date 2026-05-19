@@ -36,12 +36,9 @@ Deno.serve(async (req) => {
       return json({ error: "Add at least 2 wardrobe items first.", outfits: [] }, 200);
     }
 
-    const DAILY_CAP = 5;
-    const alreadyToday = (todayOutfits ?? []).length;
-    if (alreadyToday >= DAILY_CAP) {
-      return json({ error: `Daily limit reached (${DAILY_CAP}/day). Come back tomorrow for fresh looks.`, outfits: [] }, 200);
-    }
-    const requested = Math.max(1, Math.min(count, DAILY_CAP - alreadyToday));
+    // No hard daily cap — initial batch is sized by the client (5). Additional generations are unlimited.
+    const requested = Math.max(1, Math.min(count, 10));
+
 
     // Items to AVOID (worn in last 7 days)
     const wornItemIds = new Set<string>();

@@ -24,8 +24,8 @@ export default function OutfitsPage() {
 
   const itemMap = new Map(wardrobe.map((w) => [w.id, w]));
 
-  const load = async () => {
-    if (!user) return;
+  const load = async (): Promise<CloudOutfit[]> => {
+    if (!user) return [];
     setLoading(true);
     try {
       const [w, o] = await Promise.all([
@@ -34,14 +34,55 @@ export default function OutfitsPage() {
       ]);
       setWardrobe(w);
       setOutfits(o);
+      return o;
     } catch (e) {
       toast.error('Could not load', { description: (e as Error).message });
+      return [];
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
+  // Initial load + auto-generate first 5 of the day if none exist yet
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const todays = await load();
+      if (todays.length === 0 && wardrobe.length >= 2) {
+        // fire-and-forget initial daily batch
+        autoGenerate(5);
+      }
+    })();
+    // eslint-disable-next-line
+  }, [user?.id]);
+
+  // Schedule automatic refresh at local midnight
+  useEffect(() => {
+    if (!user) return;
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(24, 0, 5, 0); // 5s after midnight local
+    const ms = next.getTime() - now.getTime();
+    const t = setTimeout(async () => {
+      const todays = await load();
+      if (todays.length === 0) autoGenerate(5);
+    }, ms);
+    return () => clearTimeout(t);
+  }, [user?.id, outfits.length]);
+
+  const autoGenerate = async (n: number) => {
+    setGenerating(true);
+    try {
+      const fresh = await generateOutfits({ occasion, mood, count: n });
+      if (fresh.length) setOutfits((p) => [...fresh, ...p].slice(0, 5));
+    } catch (e) {
+      // silent on auto-run
+      console.warn('auto-generate failed', e);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
 
   const regenerate = async () => {
     if (wardrobe.length < 2) {
