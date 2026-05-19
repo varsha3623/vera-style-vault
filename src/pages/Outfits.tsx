@@ -30,7 +30,7 @@ export default function OutfitsPage() {
     try {
       const [w, o] = await Promise.all([
         listWardrobe(user.id),
-        listOutfits(user.id, { todayOnly: true, limit: 5 }),
+        listOutfits(user.id, { todayOnly: true }),
       ]);
       setWardrobe(w);
       setOutfits(o);
@@ -49,7 +49,6 @@ export default function OutfitsPage() {
     (async () => {
       const todays = await load();
       if (todays.length === 0 && wardrobe.length >= 2) {
-        // fire-and-forget initial daily batch
         autoGenerate(5);
       }
     })();
@@ -61,7 +60,7 @@ export default function OutfitsPage() {
     if (!user) return;
     const now = new Date();
     const next = new Date(now);
-    next.setHours(24, 0, 5, 0); // 5s after midnight local
+    next.setHours(24, 0, 5, 0);
     const ms = next.getTime() - now.getTime();
     const t = setTimeout(async () => {
       const todays = await load();
@@ -74,15 +73,13 @@ export default function OutfitsPage() {
     setGenerating(true);
     try {
       const fresh = await generateOutfits({ occasion, mood, count: n });
-      if (fresh.length) setOutfits((p) => [...fresh, ...p].slice(0, 5));
+      if (fresh.length) setOutfits((p) => [...fresh, ...p]);
     } catch (e) {
-      // silent on auto-run
       console.warn('auto-generate failed', e);
     } finally {
       setGenerating(false);
     }
   };
-
 
   const regenerate = async () => {
     if (wardrobe.length < 2) {
@@ -91,12 +88,14 @@ export default function OutfitsPage() {
     }
     setGenerating(true);
     try {
-      const fresh = await generateOutfits({ occasion, mood, count: 4 });
+      // First batch of the day = 5, subsequent batches = 3 (no cap)
+      const count = outfits.length === 0 ? 5 : 3;
+      const fresh = await generateOutfits({ occasion, mood, count });
       if (!fresh.length) {
         toast.error('No outfits returned', { description: 'Try a different occasion or add more pieces.' });
       } else {
         toast.success(`${fresh.length} new looks curated`);
-        setOutfits((p) => [...fresh, ...p].slice(0, 5));
+        setOutfits((p) => [...fresh, ...p]);
       }
     } catch (e) {
       toast.error('Generation failed', { description: (e as Error).message });
