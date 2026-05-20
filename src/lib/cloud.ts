@@ -136,7 +136,27 @@ export async function listOutfits(userId: string, opts?: { savedOnly?: boolean; 
 
 export async function generateOutfits(input: { occasion?: string; mood?: string; weather?: unknown; count?: number }): Promise<CloudOutfit[]> {
   const { data, error } = await supabase.functions.invoke('generate-outfits', { body: input });
-  if (error) throw error;
+  if (error) {
+    // Try to surface the real server-side message (e.g. "AI credits exhausted.")
+    let detail = error.message ?? 'Edge function error';
+    try {
+      const ctx: any = (error as any).context;
+      if (ctx?.json) {
+        const body = await ctx.json();
+        if (body?.error) detail = body.error;
+      } else if (ctx?.text) {
+        const txt = await ctx.text();
+        if (txt) detail = txt;
+      }
+    } catch { /* noop */ }
+    if (/402/.test(detail) || /credit/i.test(detail)) {
+      throw new Error('AI credits exhausted — please top up in Settings → Workspace → Usage.');
+    }
+    if (/429/.test(detail) || /rate/i.test(detail)) {
+      throw new Error('Rate limit reached — try again in a moment.');
+    }
+    throw new Error(detail);
+  }
   if (data?.error && (!data?.outfits || data.outfits.length === 0)) throw new Error(data.error);
   return (data?.outfits ?? []) as CloudOutfit[];
 }
