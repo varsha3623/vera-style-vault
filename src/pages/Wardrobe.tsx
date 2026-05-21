@@ -67,10 +67,13 @@ export default function WardrobePage() {
         const url = await uploadWardrobeImage(user.id, file);
         const item = await createWardrobeItem(user.id, url);
         setItems((p) => [item, ...p]);
-        analyzeItem(item.id, url).then(() => {
+        analyzeItem(item.id, url).then((result) => {
+          if (result?.fallback) {
+            toast.warning('Item saved without AI analysis', { description: result.error ?? 'Try analysis again after AI credits are available.' });
+          }
           load();
         }).catch((err) => {
-          toast.error('Analysis failed', { description: err.message });
+          toast.warning('Item saved without AI analysis', { description: err.message });
         });
         done++;
       } catch (err) {
