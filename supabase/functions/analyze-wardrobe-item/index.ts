@@ -59,12 +59,19 @@ Deno.serve(async (req) => {
       }),
     });
 
-    if (r.status === 429) return json({ error: "Rate limit, try again shortly." }, 429);
-    if (r.status === 402) return json({ error: "AI credits exhausted. Add credits in Settings." }, 402);
+    if (r.status === 429) {
+      await markAnalysisFallback(supabase, item_id, claims.claims.sub);
+      return json({ error: "Rate limit, try again shortly.", fallback: true }, 200);
+    }
+    if (r.status === 402) {
+      await markAnalysisFallback(supabase, item_id, claims.claims.sub);
+      return json({ error: "AI credits exhausted. Add credits in Settings.", fallback: true }, 200);
+    }
     if (!r.ok) {
       const t = await r.text();
       console.error("Gateway error", r.status, t);
-      return json({ error: "AI analysis failed" }, 500);
+      await markAnalysisFallback(supabase, item_id, claims.claims.sub);
+      return json({ error: "AI analysis failed", fallback: true }, 200);
     }
     const data = await r.json();
     const raw = data.choices?.[0]?.message?.content ?? "{}";
@@ -93,9 +100,17 @@ Deno.serve(async (req) => {
     return json({ analysis: parsed });
   } catch (e) {
     console.error(e);
-    return json({ error: (e as Error).message }, 500);
+    return json({ error: "AI analysis temporarily unavailable", fallback: true }, 200);
   }
 });
+
+async function markAnalysisFallback(supabase: any, itemId: string | undefined, userId: string) {
+  if (!itemId) return;
+  await supabase.from("wardrobe_items").update({
+    ai_analyzed: true,
+    ai_description: "Saved without AI analysis. Re-analyze when AI credits are available.",
+  }).eq("id", itemId).eq("user_id", userId);
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
