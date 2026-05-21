@@ -1,5 +1,32 @@
 // VÉRA Cloud data layer — Supabase wrapper for wardrobe, outfits, preferences, AI calls.
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
+
+type FunctionErrorContext = {
+  json?: () => Promise<unknown>;
+  text?: () => Promise<string>;
+};
+
+type FunctionInvokeError = Error & { context?: FunctionErrorContext };
+
+function hasErrorMessage(value: unknown): value is { error: string } {
+  return typeof value === 'object' && value !== null && 'error' in value && typeof (value as { error?: unknown }).error === 'string';
+}
+
+async function getFunctionErrorDetail(error: Error, fallback: string) {
+  let detail = error.message ?? fallback;
+  try {
+    const ctx = (error as FunctionInvokeError).context;
+    if (ctx?.json) {
+      const body = await ctx.json();
+      if (hasErrorMessage(body)) detail = body.error;
+    } else if (ctx?.text) {
+      const txt = await ctx.text();
+      if (txt) detail = txt;
+    }
+  } catch { /* noop */ }
+  return detail;
+}
 
 export interface CloudWardrobeItem {
   id: string;
@@ -50,7 +77,7 @@ export interface CloudPreferences {
   style: string | null;
   sleeveless_allowed: boolean;
   short_outfits_allowed: boolean;
-  extra: Record<string, any>;
+  extra: Json;
 }
 
 // ---------- Wardrobe ----------
@@ -102,17 +129,7 @@ export async function analyzeItem(itemId: string, imageUrl: string) {
     body: { item_id: itemId, image_url: imageUrl },
   });
   if (error) {
-    let detail = error.message ?? 'AI analysis failed';
-    try {
-      const ctx: any = (error as any).context;
-      if (ctx?.json) {
-        const body = await ctx.json();
-        if (body?.error) detail = body.error;
-      } else if (ctx?.text) {
-        const txt = await ctx.text();
-        if (txt) detail = txt;
-      }
-    } catch { /* noop */ }
+    const detail = await getFunctionErrorDetail(error, 'AI analysis failed');
     if (/402/.test(detail) || /credit/i.test(detail)) {
       return { fallback: true, error: 'AI credits exhausted. Item saved without analysis.' };
     }
@@ -130,12 +147,12 @@ export async function getPreferences(userId: string): Promise<CloudPreferences |
   return data as CloudPreferences | null;
 }
 
-export async function savePreferences(userId: string, prefs: Partial<Omit<CloudPreferences, 'user_id' | 'extra'>> & { extra?: any }) {
+export async function savePreferences(userId: string, prefs: Partial<Omit<CloudPreferences, 'user_id' | 'extra'>> & { extra?: Json }) {
   const { error } = await supabase.from('preferences').upsert({
     user_id: userId,
     ...prefs,
     updated_at: new Date().toISOString(),
-  } as any);
+  });
   if (error) throw error;
 }
 
@@ -157,17 +174,7 @@ export async function generateOutfits(input: { occasion?: string; mood?: string;
   const { data, error } = await supabase.functions.invoke('generate-outfits', { body: input });
   if (error) {
     // Try to surface the real server-side message (e.g. "AI credits exhausted.")
-    let detail = error.message ?? 'Edge function error';
-    try {
-      const ctx: any = (error as any).context;
-      if (ctx?.json) {
-        const body = await ctx.json();
-        if (body?.error) detail = body.error;
-      } else if (ctx?.text) {
-        const txt = await ctx.text();
-        if (txt) detail = txt;
-      }
-    } catch { /* noop */ }
+    const detail = await getFunctionErrorDetail(error, 'Edge function error');
     if (/402/.test(detail) || /credit/i.test(detail)) {
       throw new Error('AI credits exhausted — please top up in Settings → Workspace → Usage.');
     }
