@@ -101,7 +101,26 @@ export async function analyzeItem(itemId: string, imageUrl: string) {
   const { data, error } = await supabase.functions.invoke('analyze-wardrobe-item', {
     body: { item_id: itemId, image_url: imageUrl },
   });
-  if (error) throw error;
+  if (error) {
+    let detail = error.message ?? 'AI analysis failed';
+    try {
+      const ctx: any = (error as any).context;
+      if (ctx?.json) {
+        const body = await ctx.json();
+        if (body?.error) detail = body.error;
+      } else if (ctx?.text) {
+        const txt = await ctx.text();
+        if (txt) detail = txt;
+      }
+    } catch { /* noop */ }
+    if (/402/.test(detail) || /credit/i.test(detail)) {
+      return { fallback: true, error: 'AI credits exhausted. Item saved without analysis.' };
+    }
+    if (/429/.test(detail) || /rate/i.test(detail)) {
+      return { fallback: true, error: 'AI analysis is rate limited. Item saved without analysis.' };
+    }
+    throw new Error(detail);
+  }
   return data;
 }
 
