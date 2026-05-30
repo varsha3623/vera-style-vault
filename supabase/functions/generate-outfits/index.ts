@@ -1,8 +1,8 @@
-// VÉRA — AI outfit recommendation engine (Gemini 2.5 Flash, structured output)
+// VÉRA — AI outfit recommendation engine via Google Generative Language API (Gemini 2.5 Flash)
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
@@ -21,7 +21,6 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const { occasion = "everyday", mood, weather, count = 4, persist = true } = body;
 
-    // Daily generation cap
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
@@ -36,11 +35,8 @@ Deno.serve(async (req) => {
       return json({ error: "Add at least 2 wardrobe items first.", outfits: [] }, 200);
     }
 
-    // No hard daily cap — initial batch is sized by the client (5). Additional generations are unlimited.
     const requested = Math.max(1, Math.min(count, 10));
 
-
-    // Items to AVOID (worn in last 7 days)
     const wornItemIds = new Set<string>();
     (wornRecent ?? []).forEach((o: any) => (o.item_ids ?? []).forEach((id: string) => wornItemIds.add(id)));
 
@@ -66,28 +62,31 @@ Deno.serve(async (req) => {
       avoid_item_ids: Array.from(wornItemIds),
     });
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "system", content: system }, { role: "user", content: userMsg }],
-        response_format: { type: "json_object" },
-      }),
-    });
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: [{ role: "user", parts: [{ text: userMsg }] }],
+          generationConfig: { responseMimeType: "application/json" },
+        }),
+      },
+    );
 
     if (r.status === 429) return json({ error: "Rate limit, try again shortly." }, 429);
-    if (r.status === 402) return json({ error: "AI credits exhausted." }, 402);
+    if (r.status === 402 || r.status === 403) return json({ error: "AI quota exhausted." }, 402);
     if (!r.ok) {
-      console.error("Gateway error", r.status, await r.text());
+      console.error("Gemini error", r.status, await r.text());
       return json({ error: "AI generation failed" }, 500);
     }
     const data = await r.json();
+    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
     let parsed: { outfits?: any[] } = {};
-    try { parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}"); } catch { parsed = {}; }
+    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
     const outfits = (parsed.outfits ?? []).filter((o) => Array.isArray(o.item_ids) && o.item_ids.length >= 2);
 
-    // Validate ids; strip outfits reusing worn-in-last-7-days items; dedupe against today + within batch
     const validIds = new Set(items.map((i) => i.id));
     const sig = (ids: string[]) => [...ids].sort().join("|");
     const seen = new Set<string>((todayOutfits ?? []).map((o: any) => sig(o.item_ids ?? [])));

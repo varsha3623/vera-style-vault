@@ -1,8 +1,8 @@
-// VÉRA — Vision analysis of a wardrobe item via Lovable AI Gateway (Gemini 2.5 Flash)
+// VÉRA — Vision analysis of a wardrobe item via Google Generative Language API (Gemini 2.5 Flash)
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
@@ -37,44 +37,61 @@ Deno.serve(async (req) => {
     const { image_url, item_id } = await req.json();
     if (!image_url) return json({ error: "image_url required" }, 400);
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Analyze this clothing item. Return JSON only." },
-              { type: "image_url", image_url: { url: image_url } },
-            ],
+    // Fetch image and convert to base64 inline data for Gemini
+    let inlineData: { mimeType: string; data: string } | null = null;
+    try {
+      const imgRes = await fetch(image_url);
+      if (!imgRes.ok) throw new Error(`image fetch ${imgRes.status}`);
+      const mimeType = imgRes.headers.get("content-type") || "image/jpeg";
+      const buf = new Uint8Array(await imgRes.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+      inlineData = { mimeType, data: btoa(bin) };
+    } catch (e) {
+      console.error("Image fetch failed", e);
+      await markAnalysisFallback(supabase, item_id, claims.claims.sub);
+      return json({ error: "Could not load image for analysis", fallback: true }, 200);
+    }
+
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: "Analyze this clothing item. Return JSON only." },
+                { inlineData },
+              ],
+            },
+          ],
+          generationConfig: {
+            responseMimeType: "application/json",
           },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
+        }),
+      },
+    );
 
     if (r.status === 429) {
       await markAnalysisFallback(supabase, item_id, claims.claims.sub);
       return json({ error: "Rate limit, try again shortly.", fallback: true }, 200);
     }
-    if (r.status === 402) {
+    if (r.status === 402 || r.status === 403) {
       await markAnalysisFallback(supabase, item_id, claims.claims.sub);
-      return json({ error: "AI credits exhausted. Add credits in Settings.", fallback: true }, 200);
+      return json({ error: "AI quota exhausted. Check GEMINI_API_KEY.", fallback: true }, 200);
     }
     if (!r.ok) {
       const t = await r.text();
-      console.error("Gateway error", r.status, t);
+      console.error("Gemini error", r.status, t);
       await markAnalysisFallback(supabase, item_id, claims.claims.sub);
       return json({ error: "AI analysis failed", fallback: true }, 200);
     }
     const data = await r.json();
-    const raw = data.choices?.[0]?.message?.content ?? "{}";
+    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
     let parsed: Record<string, unknown> = {};
     try { parsed = JSON.parse(raw); } catch { parsed = {}; }
 
