@@ -6,6 +6,8 @@ const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
+const UNAVAILABLE_MSG = "VÉRA is currently unable to generate AI recommendations. Please try again.";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -78,62 +80,13 @@ Deno.serve(async (req) => {
       }));
       const { data: inserted, error: insertError } = await supabase.from("outfits").insert(rows).select();
       if (insertError) {
-        console.error("Fallback outfit insert failed", insertError);
+        console.error("Outfit insert failed", insertError);
         return cleaned;
       }
       return inserted ?? cleaned;
     };
 
-    const fallbackOutfits = () => {
-      const available = items
-        .filter((i) => !wornItemIds.has(i.id))
-        .sort((a, b) => (a.worn_count ?? 0) - (b.worn_count ?? 0));
-      if (available.length < 2) return [];
-
-      const categoryIncludes = (item: any, terms: string[]) => {
-        const text = `${item.category ?? ""} ${item.subcategory ?? ""} ${item.name ?? ""}`.toLowerCase();
-        return terms.some((term) => text.includes(term));
-      };
-      const tops = available.filter((i) => categoryIncludes(i, ["top", "shirt", "blouse", "tee", "sweater", "jacket", "blazer"]));
-      const bottoms = available.filter((i) => categoryIncludes(i, ["bottom", "pant", "jean", "trouser", "skirt", "short"]));
-      const dresses = available.filter((i) => categoryIncludes(i, ["dress", "jumpsuit"]));
-      const shoes = available.filter((i) => categoryIncludes(i, ["shoe", "sneaker", "heel", "boot", "sandal"]));
-      const accessories = available.filter((i) => categoryIncludes(i, ["bag", "belt", "jewelry", "accessory", "scarf"]));
-
-      const signatures = new Set<string>((todayOutfits ?? []).map((o: any) => [...(o.item_ids ?? [])].sort().join("|")));
-      const result: any[] = [];
-      const addLook = (ids: string[], title: string) => {
-        const unique = [...new Set(ids)].filter(Boolean).slice(0, 5);
-        if (unique.length < 2) return;
-        const signature = [...unique].sort().join("|");
-        if (signatures.has(signature)) return;
-        signatures.add(signature);
-        result.push({
-          title,
-          reasoning: "Gemini styling is temporarily unavailable, so VÉRA curated this look from your least-worn compatible pieces. The combination balances category coverage, occasion fit, and easy color pairing.",
-          item_ids: unique,
-          occasion,
-          confidence: 0.72,
-          color_harmony: "Balanced neutrals and wardrobe-compatible tones.",
-          suggested_accessories: accessories.slice(0, 2).map((i) => i.name ?? i.category ?? "accessory"),
-        });
-      };
-
-      let cursor = 0;
-      while (result.length < requested && cursor < available.length * 2) {
-        const top = tops[cursor % Math.max(tops.length, 1)];
-        const bottom = bottoms[cursor % Math.max(bottoms.length, 1)];
-        const dress = dresses[cursor % Math.max(dresses.length, 1)];
-        const shoe = shoes[cursor % Math.max(shoes.length, 1)];
-        if (top && bottom) addLook([top.id, bottom.id, shoe?.id, accessories[cursor % Math.max(accessories.length, 1)]?.id], `${occasion} edit ${result.length + 1}`);
-        if (result.length < requested && dress) addLook([dress.id, shoe?.id, accessories[cursor % Math.max(accessories.length, 1)]?.id], `${occasion} dress edit ${result.length + 1}`);
-        cursor++;
-      }
-      for (let i = 0; result.length < requested && i < available.length - 1; i++) {
-        addLook([available[i].id, available[i + 1].id, available[i + 2]?.id], `${occasion} wardrobe edit ${result.length + 1}`);
-      }
-      return result.slice(0, requested);
-    };
+    console.log("[generate-outfits] calling Gemini", { userId, requested, occasion, mood, wardrobe_size: items.length });
 
     const r = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -143,26 +96,50 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents: [{ role: "user", parts: [{ text: userMsg }] }],
-          generationConfig: { responseMimeType: "application/json" },
+          generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
         }),
       },
     );
 
-    const returnFallback = async (message: string) => {
-      const savedFallback = await saveOutfits(fallbackOutfits());
-      return json({ error: message, fallback: true, outfits: savedFallback }, 200);
-    };
+    console.log("[generate-outfits] Gemini HTTP status", r.status);
 
-    if (r.status === 429) return returnFallback("AI styling is rate limited. Showing a wardrobe-based edit instead.");
-    if (r.status === 402 || r.status === 403) return returnFallback("AI quota unavailable. Showing a wardrobe-based edit instead.");
     if (!r.ok) {
-      console.error("Gemini error", r.status, await r.text());
-      return returnFallback("AI generation is temporarily unavailable. Showing a wardrobe-based edit instead.");
+      const errText = await r.text();
+      console.error("[generate-outfits] Gemini error response", { status: r.status, body: errText });
+      if (r.status === 429) console.error("[generate-outfits] QUOTA/RATE LIMIT hit (429)");
+      if (r.status === 402 || r.status === 403) console.error("[generate-outfits] BILLING/AUTH issue", r.status);
+      if (r.status === 503) console.error("[generate-outfits] Gemini overloaded (503)");
+      return json({ error: UNAVAILABLE_MSG }, 503);
     }
+
     const data = await r.json();
-    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
+    console.log("[generate-outfits] Gemini response", {
+      finishReason: data?.candidates?.[0]?.finishReason,
+      safetyRatings: data?.candidates?.[0]?.safetyRatings,
+      usageMetadata: data?.usageMetadata,
+      promptFeedback: data?.promptFeedback,
+    });
+
+    const finishReason = data?.candidates?.[0]?.finishReason;
+    if (finishReason && finishReason !== "STOP") {
+      console.error("[generate-outfits] non-STOP finish reason", finishReason, JSON.stringify(data).slice(0, 2000));
+      return json({ error: UNAVAILABLE_MSG }, 502);
+    }
+
+    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    if (!raw) {
+      console.error("[generate-outfits] empty response text", JSON.stringify(data).slice(0, 2000));
+      return json({ error: UNAVAILABLE_MSG }, 502);
+    }
+
     let parsed: { outfits?: any[] } = {};
-    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+    try {
+      parsed = JSON.parse(raw);
+    } catch (parseErr) {
+      console.error("[generate-outfits] JSON parse error", parseErr, "raw:", raw.slice(0, 2000));
+      return json({ error: UNAVAILABLE_MSG }, 502);
+    }
+
     const outfits = (parsed.outfits ?? []).filter((o) => Array.isArray(o.item_ids) && o.item_ids.length >= 2);
 
     const validIds = new Set(items.map((i) => i.id));
@@ -180,11 +157,16 @@ Deno.serve(async (req) => {
       if (cleaned.length >= requested) break;
     }
 
-    const saved = await saveOutfits(cleaned.length ? cleaned : fallbackOutfits());
+    if (!cleaned.length) {
+      console.error("[generate-outfits] Gemini returned no usable outfits", { rawOutfitCount: outfits.length });
+      return json({ error: UNAVAILABLE_MSG }, 502);
+    }
+
+    const saved = await saveOutfits(cleaned);
     return json({ outfits: saved });
   } catch (e) {
-    console.error(e);
-    return json({ error: (e as Error).message }, 500);
+    console.error("[generate-outfits] unhandled error", e);
+    return json({ error: UNAVAILABLE_MSG }, 500);
   }
 });
 
