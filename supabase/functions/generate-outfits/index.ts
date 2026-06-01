@@ -62,6 +62,79 @@ Deno.serve(async (req) => {
       avoid_item_ids: Array.from(wornItemIds),
     });
 
+    const saveOutfits = async (cleaned: any[]) => {
+      if (!persist || !cleaned.length) return cleaned;
+      const rows = cleaned.map((o) => ({
+        user_id: userId,
+        title: o.title ?? "Untitled look",
+        reasoning: o.reasoning ?? null,
+        occasion: o.occasion ?? occasion,
+        mood: mood ?? null,
+        weather: weather ?? null,
+        confidence: o.confidence ?? null,
+        color_harmony: o.color_harmony ?? null,
+        suggested_accessories: o.suggested_accessories ?? [],
+        item_ids: o.item_ids,
+      }));
+      const { data: inserted, error: insertError } = await supabase.from("outfits").insert(rows).select();
+      if (insertError) {
+        console.error("Fallback outfit insert failed", insertError);
+        return cleaned;
+      }
+      return inserted ?? cleaned;
+    };
+
+    const fallbackOutfits = () => {
+      const available = items
+        .filter((i) => !wornItemIds.has(i.id))
+        .sort((a, b) => (a.worn_count ?? 0) - (b.worn_count ?? 0));
+      if (available.length < 2) return [];
+
+      const categoryIncludes = (item: any, terms: string[]) => {
+        const text = `${item.category ?? ""} ${item.subcategory ?? ""} ${item.name ?? ""}`.toLowerCase();
+        return terms.some((term) => text.includes(term));
+      };
+      const tops = available.filter((i) => categoryIncludes(i, ["top", "shirt", "blouse", "tee", "sweater", "jacket", "blazer"]));
+      const bottoms = available.filter((i) => categoryIncludes(i, ["bottom", "pant", "jean", "trouser", "skirt", "short"]));
+      const dresses = available.filter((i) => categoryIncludes(i, ["dress", "jumpsuit"]));
+      const shoes = available.filter((i) => categoryIncludes(i, ["shoe", "sneaker", "heel", "boot", "sandal"]));
+      const accessories = available.filter((i) => categoryIncludes(i, ["bag", "belt", "jewelry", "accessory", "scarf"]));
+
+      const signatures = new Set<string>((todayOutfits ?? []).map((o: any) => [...(o.item_ids ?? [])].sort().join("|")));
+      const result: any[] = [];
+      const addLook = (ids: string[], title: string) => {
+        const unique = [...new Set(ids)].filter(Boolean).slice(0, 5);
+        if (unique.length < 2) return;
+        const signature = [...unique].sort().join("|");
+        if (signatures.has(signature)) return;
+        signatures.add(signature);
+        result.push({
+          title,
+          reasoning: "Gemini styling is temporarily unavailable, so VÉRA curated this look from your least-worn compatible pieces. The combination balances category coverage, occasion fit, and easy color pairing.",
+          item_ids: unique,
+          occasion,
+          confidence: 0.72,
+          color_harmony: "Balanced neutrals and wardrobe-compatible tones.",
+          suggested_accessories: accessories.slice(0, 2).map((i) => i.name ?? i.category ?? "accessory"),
+        });
+      };
+
+      let cursor = 0;
+      while (result.length < requested && cursor < available.length * 2) {
+        const top = tops[cursor % Math.max(tops.length, 1)];
+        const bottom = bottoms[cursor % Math.max(bottoms.length, 1)];
+        const dress = dresses[cursor % Math.max(dresses.length, 1)];
+        const shoe = shoes[cursor % Math.max(shoes.length, 1)];
+        if (top && bottom) addLook([top.id, bottom.id, shoe?.id, accessories[cursor % Math.max(accessories.length, 1)]?.id], `${occasion} edit ${result.length + 1}`);
+        if (result.length < requested && dress) addLook([dress.id, shoe?.id, accessories[cursor % Math.max(accessories.length, 1)]?.id], `${occasion} dress edit ${result.length + 1}`);
+        cursor++;
+      }
+      for (let i = 0; result.length < requested && i < available.length - 1; i++) {
+        addLook([available[i].id, available[i + 1].id, available[i + 2]?.id], `${occasion} wardrobe edit ${result.length + 1}`);
+      }
+      return result.slice(0, requested);
+    };
+
     const r = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
@@ -75,11 +148,16 @@ Deno.serve(async (req) => {
       },
     );
 
-    if (r.status === 429) return json({ error: "Rate limit, try again shortly." }, 429);
-    if (r.status === 402 || r.status === 403) return json({ error: "AI quota exhausted." }, 402);
+    const returnFallback = async (message: string) => {
+      const savedFallback = await saveOutfits(fallbackOutfits());
+      return json({ error: message, fallback: true, outfits: savedFallback }, 200);
+    };
+
+    if (r.status === 429) return returnFallback("AI styling is rate limited. Showing a wardrobe-based edit instead.");
+    if (r.status === 402 || r.status === 403) return returnFallback("AI quota unavailable. Showing a wardrobe-based edit instead.");
     if (!r.ok) {
       console.error("Gemini error", r.status, await r.text());
-      return json({ error: "AI generation failed" }, 500);
+      return returnFallback("AI generation is temporarily unavailable. Showing a wardrobe-based edit instead.");
     }
     const data = await r.json();
     const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
@@ -102,23 +180,7 @@ Deno.serve(async (req) => {
       if (cleaned.length >= requested) break;
     }
 
-    let saved: any[] = cleaned;
-    if (persist && cleaned.length) {
-      const rows = cleaned.map((o) => ({
-        user_id: userId,
-        title: o.title ?? "Untitled look",
-        reasoning: o.reasoning ?? null,
-        occasion: o.occasion ?? occasion,
-        mood: mood ?? null,
-        weather: weather ?? null,
-        confidence: o.confidence ?? null,
-        color_harmony: o.color_harmony ?? null,
-        suggested_accessories: o.suggested_accessories ?? [],
-        item_ids: o.item_ids,
-      }));
-      const { data: inserted } = await supabase.from("outfits").insert(rows).select();
-      saved = inserted ?? cleaned;
-    }
+    const saved = await saveOutfits(cleaned.length ? cleaned : fallbackOutfits());
     return json({ outfits: saved });
   } catch (e) {
     console.error(e);
