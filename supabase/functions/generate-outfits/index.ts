@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
       if (r.status === 429) console.error("[generate-outfits] QUOTA/RATE LIMIT hit (429)");
       if (r.status === 402 || r.status === 403) console.error("[generate-outfits] BILLING/AUTH issue", r.status);
       if (r.status === 503) console.error("[generate-outfits] Gemini overloaded (503)");
-      return json({ error: UNAVAILABLE_MSG }, 503);
+      return json({ error: UNAVAILABLE_MSG, outfits: [] });
     }
 
     const data = await r.json();
@@ -123,13 +123,13 @@ Deno.serve(async (req) => {
     const finishReason = data?.candidates?.[0]?.finishReason;
     if (finishReason && finishReason !== "STOP") {
       console.error("[generate-outfits] non-STOP finish reason", finishReason, JSON.stringify(data).slice(0, 2000));
-      return json({ error: UNAVAILABLE_MSG }, 502);
+      return json({ error: UNAVAILABLE_MSG, outfits: [] });
     }
 
     const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
     if (!raw) {
       console.error("[generate-outfits] empty response text", JSON.stringify(data).slice(0, 2000));
-      return json({ error: UNAVAILABLE_MSG }, 502);
+      return json({ error: UNAVAILABLE_MSG, outfits: [] });
     }
 
     let parsed: { outfits?: any[] } = {};
@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
       parsed = JSON.parse(raw);
     } catch (parseErr) {
       console.error("[generate-outfits] JSON parse error", parseErr, "raw:", raw.slice(0, 2000));
-      return json({ error: UNAVAILABLE_MSG }, 502);
+      return json({ error: UNAVAILABLE_MSG, outfits: [] });
     }
 
     const outfits = (parsed.outfits ?? []).filter((o) => Array.isArray(o.item_ids) && o.item_ids.length >= 2);
@@ -159,14 +159,14 @@ Deno.serve(async (req) => {
 
     if (!cleaned.length) {
       console.error("[generate-outfits] Gemini returned no usable outfits", { rawOutfitCount: outfits.length });
-      return json({ error: UNAVAILABLE_MSG }, 502);
+      return json({ error: UNAVAILABLE_MSG, outfits: [] });
     }
 
     const saved = await saveOutfits(cleaned);
     return json({ outfits: saved });
   } catch (e) {
     console.error("[generate-outfits] unhandled error", e);
-    return json({ error: UNAVAILABLE_MSG }, 500);
+    return json({ error: UNAVAILABLE_MSG, outfits: [] });
   }
 });
 
