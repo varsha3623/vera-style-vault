@@ -65,11 +65,11 @@ Deno.serve(async (req) => {
       },
     );
 
-    if (r.status === 429) return json({ error: "Rate limit, try again shortly." }, 429);
-    if (r.status === 402 || r.status === 403) return json({ error: "AI quota exhausted. Check GEMINI_API_KEY." }, 402);
+    if (r.status === 429) return json({ error: "Gemini rate limit or daily quota reached. Try again later." });
+    if (r.status === 402 || r.status === 403) return json({ error: "AI quota exhausted. Check GEMINI_API_KEY billing." });
     if (!r.ok) {
       console.error("Gemini error", r.status, await r.text());
-      return json({ error: "Collage generation failed" }, 500);
+      return json({ error: "Collage generation failed" });
     }
     const data = await r.json();
     const imgPart = data?.candidates?.[0]?.content?.parts?.find(
