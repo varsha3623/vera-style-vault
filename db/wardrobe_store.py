@@ -79,11 +79,44 @@ def append_upload_record(
         "category": category.strip(),
         "color": color.strip(),
         "item_name": item_name.strip(),
+        "ai_analyzed": False,
+        "ai_description": "",
+        "worn_count": 0,
+        "occasions": [],
+        "style": "",
+        "primary_color": color.strip() or None,
+        "aesthetic": "",
     }
 
-    wardrobe_collection.insert_one(record)
-
+    result = wardrobe_collection.insert_one(record)
+    record["id"] = str(result.inserted_id)
     return record
+
+
+def _normalize_wardrobe_item(item: Dict[str, Any]) -> Dict[str, Any]:
+    image_url = item.get("image_url")
+    if not image_url and item.get("filename"):
+        image_url = f"/uploads/{item['filename']}"
+
+    return {
+        "id": str(item.get("_id") or item.get("id") or ""),
+        "image_url": image_url,
+        "imageUrl": image_url,
+        "title": item.get("item_name") or item.get("original_filename") or "",
+        "name": item.get("item_name") or item.get("original_filename") or "",
+        "description": item.get("ai_description") or "",
+        "category": item.get("category") or "",
+        "created_at": item.get("created_at") or item.get("createdAt") or "",
+        "createdAt": item.get("created_at") or item.get("createdAt") or "",
+        "ai_analyzed": bool(item.get("ai_analyzed", False)),
+        "ai_description": item.get("ai_description") or "",
+        "worn_count": int(item.get("worn_count", 0)),
+        "occasions": item.get("occasions") or [],
+        "style": item.get("style") or "",
+        "primary_color": item.get("primary_color") or item.get("color") or "",
+        "aesthetic": item.get("aesthetic") or "",
+        "color": item.get("color") or "",
+    }
 
 
 def list_wardrobe_for_user(email: str | None):
@@ -94,12 +127,11 @@ def list_wardrobe_for_user(email: str | None):
 
     items = list(
         wardrobe_collection.find(
-            {"email": user_id},
-            {"_id": 0}
+            {"email": user_id}
         )
     )
 
-    return items
+    return [_normalize_wardrobe_item(item) for item in items]
 
 def wardrobe_summary_for_email(email: Optional[str]) -> str:
     items = list_wardrobe_for_user(email)

@@ -1,13 +1,19 @@
+import os
+from dotenv import load_dotenv
 from pymongo import MongoClient
 
-MONGO_URL = "mongodb+srv://vaishnavimathapati30:vera123@cluster0.5dvrx.mongodb.net/?appName=Cluster0"
+load_dotenv()
+
+MONGO_URL = os.getenv("MONGO_URI")
+if not MONGO_URL:
+	raise RuntimeError("MONGO_URI environment variable is not set. See .env.example")
 
 client = MongoClient(MONGO_URL)
 
-db = client["vera_db"]
+DB_NAME = os.getenv("MONGO_DB", "vera_db")
+db = client[DB_NAME]
 
 wardrobe_collection = db["wardrobe"]
-
 chat_collection = db["chat_history"]
 
-print("MongoDB connected successfully")
+print("MongoDB connected successfully to database:", DB_NAME)
